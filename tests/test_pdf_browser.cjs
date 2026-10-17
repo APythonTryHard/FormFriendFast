@@ -23,6 +23,7 @@ const { chromium } = require('playwright');
     const chooser = page.waitForEvent('filechooser');
     await page.locator('#drop-zone').click();
     await (await chooser).setFiles(path.join(directory, 'packet.pdf'));
+    await page.locator('#language-continue').click();
     await page.locator('#result-state').waitFor({ state: 'visible' });
     assert.equal(await page.locator('#page-select option').count(), 2);
     assert.equal(await page.locator('#page-select').inputValue(), '0');
@@ -69,6 +70,7 @@ const { chromium } = require('playwright');
     const before = analyses;
     for (const file of ['encrypted.pdf', 'broken.pdf']) {
       await page.locator('#image-input').setInputFiles(path.join(directory, file));
+      await page.locator('#language-continue').click();
       await page.locator('#error').waitFor({ state: 'visible' });
       assert.match(await page.locator('#error').innerText(), /Encrypted|could not be opened or converted/);
       assert.equal(analyses, before, 'Rejected PDF must not reach inference');

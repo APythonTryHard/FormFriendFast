@@ -26,6 +26,14 @@ const fieldNav = document.querySelector('#field-nav');
 const fieldPrev = document.querySelector('#field-prev');
 const fieldNext = document.querySelector('#field-next');
 const fieldPosition = document.querySelector('#field-position');
+// New uploads pause here until the user confirms the help language.
+const languageStep = document.querySelector('#language-step');
+const languageStepFile = document.querySelector('#language-step-file');
+const uploadLanguage = document.querySelector('#upload-language');
+const languageContinue = document.querySelector('#language-continue');
+const languageCancel = document.querySelector('#language-cancel');
+let pendingUpload = null;
+let applyingUploadLanguage = false;
 // Phones (responsive.css <=650px) show only the selected field card plus
 // previous/next controls; wider layouts keep the full list.
 const phoneLayout = typeof window.matchMedia === 'function' ? window.matchMedia('(max-width: 650px)') : null;
@@ -225,6 +233,8 @@ function clear(keepSaved = false) {
     storeForm();
   }
   currentFile = null;
+  pendingUpload = null;
+  if (languageStep) languageStep.hidden = true;
   resetQuestion();
   currentFields = [];
   selectedField = null;
@@ -429,13 +439,57 @@ async function askSelectedField(event) {
   }
 }
 
-async function uploadImage(file) {
+function languageName(value) {
+  const option = Array.from(languageSelect.options).find(option => option.value === value);
+  return option?.textContent?.trim() || value;
+}
+
+function updateLanguageContinue() {
+  if (languageContinue) languageContinue.textContent = `Continue in ${languageName(uploadLanguage.value)}`;
+}
+
+// Every new file stops at the language step; nothing is sent until Continue.
+// Restores, PDF page switches and top-picker changes call analyze() directly.
+function uploadImage(file) {
   clear();
   if (!file) return;
   if (file.size > 8 * 1024 * 1024) {
     showError('Image is too large (maximum 8 MB).');
     return;
   }
+  if (!languageStep || !uploadLanguage) return convertUpload(file);
+  pendingUpload = file;
+  languageStepFile.textContent = file.name;
+  uploadLanguage.value = validLanguage(languageSelect.value);
+  updateLanguageContinue();
+  emptyState.hidden = true;
+  languageStep.hidden = false;
+  uploadLanguage.focus?.();
+}
+
+function confirmUpload() {
+  const file = pendingUpload;
+  if (!file) return;
+  pendingUpload = null;
+  languageStep.hidden = true;
+  languageSelect.value = validLanguage(uploadLanguage.value);
+  saveLanguage();
+  // Let the top picker sync its label; the guard keeps app.js's own change
+  // listener from re-analyzing anything before the new file is converted.
+  if (typeof languageSelect.dispatchEvent === 'function' && typeof Event === 'function') {
+    applyingUploadLanguage = true;
+    try { languageSelect.dispatchEvent(new Event('change', { bubbles: true })); }
+    finally { applyingUploadLanguage = false; }
+  }
+  return convertUpload(file);
+}
+
+function cancelUpload() {
+  clear();
+  dropZone.focus?.();
+}
+
+async function convertUpload(file) {
   const current = generation;
   controller = new AbortController();
   emptyState.hidden = true;
@@ -533,10 +587,33 @@ function storageWarning() {
 try { languageSelect.value = validLanguage(localStorage.getItem('formfriend-language')); }
 catch { languageSelect.value = 'en'; storageWarning(); }
 
-languageSelect.addEventListener('change', () => {
+function saveLanguage() {
   languageSelect.value = validLanguage(languageSelect.value);
   try { localStorage.setItem('formfriend-language', languageSelect.value); }
   catch { storageWarning(); }
+}
+
+if (uploadLanguage) {
+  uploadLanguage.replaceChildren();
+  for (const option of Array.from(languageSelect.options)) {
+    const copy = document.createElement('option');
+    copy.value = option.value;
+    copy.textContent = option.textContent;
+    copy.lang = option.value;
+    uploadLanguage.append(copy);
+  }
+  uploadLanguage.addEventListener('change', updateLanguageContinue);
+}
+languageContinue?.addEventListener('click', () => confirmUpload());
+languageCancel?.addEventListener('click', () => cancelUpload());
+
+languageSelect.addEventListener('change', () => {
+  if (applyingUploadLanguage) return; // Already saved by confirmUpload().
+  saveLanguage();
+  if (pendingUpload) {
+    uploadLanguage.value = languageSelect.value;
+    updateLanguageContinue();
+  }
   if (currentFile) analyze(currentFile, true);
 });
 pageSelect.addEventListener('change', () => selectPdfPage(Number(pageSelect.value)));

@@ -6,6 +6,7 @@ const converted = call => call.resolve({ ok: true, headers: { get: name => name 
   const page = boot(); await flush();
   page.el('#image-input').files = [new File(['PDF'], 'packet.pdf', { type: 'application/pdf' })];
   page.el('#image-input').listeners.change();
+  page.el('#language-continue').listeners.click();
   converted(page.calls[0]); await flush();
   reply(page.calls[1], { fields }); await flush();
   assert.equal(page.el('#page-control').hidden, false);
@@ -24,7 +25,7 @@ const converted = call => call.resolve({ ok: true, headers: { get: name => name 
   assert.equal(page.el('#page-control').hidden, true);
   const pending = boot(); await flush();
   pending.el('#image-input').files = [new File(['PDF'], 'pending.pdf', { type: 'application/pdf' })];
-  pending.el('#image-input').listeners.change(); converted(pending.calls[0]); await flush();
+  pending.el('#image-input').listeners.change(); pending.el('#language-continue').listeners.click(); converted(pending.calls[0]); await flush();
   reply(pending.calls[1], { fields }); await flush();
   pending.el('#page-select').value = '1'; pending.el('#page-select').listeners.change();
   pending.el('#reset-button').listeners.click();
@@ -33,7 +34,7 @@ const converted = call => call.resolve({ ok: true, headers: { get: name => name 
   assert.equal(pending.el('#result-state').hidden, true);
   const failed = boot(); await flush();
   failed.el('#image-input').files = [new File(['PDF'], 'error.pdf', { type: 'application/pdf' })];
-  failed.el('#image-input').listeners.change(); converted(failed.calls[0]); await flush();
+  failed.el('#image-input').listeners.change(); failed.el('#language-continue').listeners.click(); converted(failed.calls[0]); await flush();
   reply(failed.calls[1], { fields }); await flush();
   failed.el('#page-select').value = '1'; failed.el('#page-select').listeners.change();
   failed.calls[2].resolve({ ok: false, json: async () => ({ error: 'This PDF page could not be converted.' }) }); await flush();

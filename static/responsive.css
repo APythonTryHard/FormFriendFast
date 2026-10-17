@@ -12,6 +12,17 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 /* Single-field navigation (app.js updateFieldNav); phones only. */
 .field-nav{display:none}
 
+/* Language confirmation before each new upload (app.js uploadImage). */
+.language-step{padding:38px 34px 28px}
+.language-step-panel{display:grid;gap:12px;min-width:0;max-width:560px;margin:0 auto;padding:24px;background:#f5fbf6;border:1px solid #cbe5d4;border-radius:12px}
+.language-step-file{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#294235;font-size:16px}
+.language-step-note{color:#3b594a;font-size:14px;line-height:1.45}
+.language-step-row{display:flex;gap:8px;min-width:0}
+.upload-language{flex:1 1 auto;min-width:0;min-height:44px;padding:8px 34px 8px 12px;border:1px solid #cadacf;border-radius:8px;color:#173c30;font:inherit;font-size:15px;-webkit-appearance:none;appearance:none;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23294637' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 12px center/12px 8px;cursor:pointer}
+.language-continue{min-height:44px;max-width:60%;padding:0 18px;font-size:14px;overflow:hidden;text-overflow:ellipsis}
+.language-cancel{justify-self:start;min-height:44px;padding:0 4px;font-size:14px}
+.language-step :is(select,button):focus-visible{outline:2px solid #20845c;outline-offset:2px}
+
 /* Photo-or-file choice on touch devices (upload-choice.js). */
 html:has(.upload-sheet[open]){overflow:hidden}
 .upload-sheet{width:100%;max-width:none;max-height:100%;margin:auto 0 0;padding:0;border:0;background:transparent;color:inherit;overflow:visible}
@@ -64,6 +75,11 @@ html:has(.upload-sheet[open]){overflow:hidden}
   #page-select{font-size:16px}
   .text-button{font-size:14px}
   .empty-state{padding:12px}
+  .language-step{padding:12px}
+  .language-step-panel{padding:18px 16px 12px}
+  .language-step-row{flex-direction:column}
+  .upload-language{width:100%;font-size:16px}
+  .language-continue{width:100%;max-width:none;padding:10px 16px;white-space:normal;overflow-wrap:anywhere}
   .drop-zone{min-height:0;padding:32px 20px 28px;gap:8px;font-size:14px}
   .drop-zone strong{font-size:17px}
   .drop-zone small{max-width:34ch;margin-top:0;color:#7d8e83;font-size:12px;line-height:1.5}

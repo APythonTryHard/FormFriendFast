@@ -71,7 +71,22 @@ async function noOverflow(page, label) {
       chooser = page.waitForEvent('filechooser');
       await dropZone.tap();
       await photo.tap();
+      const analysesBeforeStep = analyses.length;
       await (await chooser).setFiles(path.join(fixtures, 'fictional.heic'));
+      // Language step: nothing is sent until Continue; touch-sized, stacked, no overflow.
+      await page.locator('#language-step').waitFor({ state: 'visible' });
+      assert.equal(await page.locator('#upload-language').evaluate(el => el === document.activeElement), true, 'Focus starts on the language select');
+      assert.equal(await page.locator('#language-step-file').innerText(), 'fictional.heic');
+      assert.equal(analyses.length, analysesBeforeStep, 'No analysis before the language is confirmed');
+      const selectBox = await page.locator('#upload-language').boundingBox();
+      for (const control of ['#upload-language', '#language-continue', '#language-cancel']) {
+        const box = await page.locator(control).boundingBox();
+        assert.ok(box.height >= 44 && box.x >= 0 && box.x + box.width <= width, `${width}: ${control} fits and is touch-sized`);
+      }
+      if (width <= 650) assert.ok((await page.locator('#language-continue').boundingBox()).y >= selectBox.y + selectBox.height, `${width}: Continue stacks under the select`);
+      if (width <= 650) assert.equal(await page.locator('#upload-language').evaluate(el => getComputedStyle(el).fontSize), '16px');
+      await noOverflow(page, `${width} language step`);
+      await page.locator('#language-continue').tap();
       await page.locator('#result-state').waitFor({ state: 'visible' });
       await page.waitForFunction(() => document.querySelector('#form-preview').naturalWidth === 400);
       assert.equal(await page.locator('#filename').innerText(), 'fictional.heic');
@@ -84,6 +99,7 @@ async function noOverflow(page, label) {
       await dropZone.tap();
       await photo.tap();
       await (await chooser).setFiles(path.join(fixtures, 'fictional.heic'));
+      await page.locator('#language-continue').click();
       await page.locator('#result-state').waitFor({ state: 'visible' });
       await page.locator('#reset-button').tap();
 
@@ -95,6 +111,7 @@ async function noOverflow(page, label) {
       assert.equal(await picker.element().evaluate(el => el.id), 'image-input');
       assert.match(await picker.element().getAttribute('accept'), /^application\/pdf,\.pdf,image\/\*,\.heic,/);
       await picker.setFiles(path.join(fixtures, 'packet.pdf'));
+      await page.locator('#language-continue').click();
       await page.locator('#result-state').waitFor({ state: 'visible' });
       assert.equal(await page.locator('#page-select option').count(), 2);
       for (const control of ['#page-select', '#reset-button', '#ask-input', '#ask-button']) {
@@ -107,6 +124,7 @@ async function noOverflow(page, label) {
       await page.locator('#reset-button').tap();
       const before = analyses.length;
       await page.locator('#photo-input').setInputFiles(path.join(fixtures, 'broken.heic'));
+      await page.locator('#language-continue').click();
       await page.locator('#error').waitFor({ state: 'visible' });
       assert.match(await page.locator('#error').innerText(), /could not be converted/);
       assert.equal(analyses.length, before);
@@ -130,9 +148,10 @@ async function noOverflow(page, label) {
     await desktop.keyboard.press('Enter');
     picker = await chooser;
     await picker.setFiles(path.join(fixtures, 'fictional.png'));
+    await desktop.locator('#language-continue').click();
     await desktop.locator('#result-state').waitFor({ state: 'visible' });
     await desktop.locator('#reset-button').click();
     await desktop.evaluate(() => storageQueue);
-    console.log(`PASS ${engine}: 320/375/390/430/768 touch layouts without overflow; Upload offers photo or file; Escape/backdrop/Cancel dismissal; photo picker image/* without capture; cancel + reselection; HEIC photo and PDF file through real conversion; safe photo error; desktop direct picker + keyboard; analysis mocked (${analyses.length} mocked calls)`);
+    console.log(`PASS ${engine}: 320/375/390/430/768 touch layouts without overflow; Upload offers photo or file; Escape/backdrop/Cancel dismissal; photo picker image/* without capture; cancel + reselection; HEIC photo and PDF file through real conversion; safe photo error; language step before any analysis (focus, touch size, stacking, no overflow); desktop direct picker + keyboard; analysis mocked (${analyses.length} mocked calls)`);
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

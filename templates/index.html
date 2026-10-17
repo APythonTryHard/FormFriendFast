@@ -32,6 +32,14 @@
                     <label id="drop-zone" class="drop-zone" for="image-input" role="button" tabindex="0" aria-labelledby="drop-zone-title" aria-describedby="drop-zone-limits drop-zone-privacy drop-zone-storage drop-zone-pages"><input id="image-input" type="file" accept="application/pdf,.pdf,image/*,.heic,.heif,.avif,.bmp,.tif,.tiff,.gif,.ico,.jp2,.jxl,.psd,.tga,.ppm,.pgm,.pbm,.qoi" hidden><span class="upload-icon" aria-hidden="true">⇧</span><strong id="drop-zone-title">Choose an image or PDF</strong><span class="drop-hint">or drop it here</span><small id="drop-zone-limits">Images or PDF · Max 8 MB · PDFs up to 20 pages</small><small id="drop-zone-privacy">Images and selected PDF pages are sent to {{ analyze_provider }} for analysis.</small><small id="drop-zone-storage">Your current document is saved in this browser. Start over deletes it.</small><small id="drop-zone-pages">Animated or multi-page images use the first frame/page; PDFs have a page selector.</small></label>
                     <input id="photo-input" type="file" accept="image/*" hidden>
                 </div>
+                <div id="language-step" class="language-step" hidden>
+                    <div class="language-step-panel">
+                        <strong id="language-step-file" class="language-step-file"></strong>
+                        <label id="language-step-note" class="language-step-note" for="upload-language">Choose the language for help with this form.</label>
+                        <div class="language-step-row"><select id="upload-language" class="upload-language" dir="auto"></select><button id="language-continue" class="ask-button language-continue" type="button">Continue</button></div>
+                        <button id="language-cancel" class="text-button language-cancel" type="button">Cancel</button>
+                    </div>
+                </div>
                 <div id="loading-state" class="loading-state" role="status" aria-live="polite" hidden>
                     <div class="loading-spinner" aria-hidden="true"></div>
                     <h3 id="loading-title">Analyzing form…</h3>

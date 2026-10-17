@@ -161,6 +161,8 @@ console.log('PASS: desktop native picker + keyboard, mobile photo/file choice sh
   page.el('#photo-input').value = 'C:\\fakepath\\IMG_0001.HEIC';
   page.el('#photo-input').listeners.change();
   assert.equal(page.el('#photo-input').value, '', 'Photo input is cleared so the same photo can be chosen again');
+  assert.equal(page.calls.length, 0, 'Photos wait for the language step');
+  page.el('#language-continue').listeners.click();
   assert.equal(page.calls[0]?.url, '/api/convert', 'Photos are normalized by the server before analysis');
   page.calls[0].resolve({ ok: true, blob: async () => new Blob(['normalized'], { type: 'image/jpeg' }) });
   await flush();
@@ -178,6 +180,7 @@ console.log('PASS: desktop native picker + keyboard, mobile photo/file choice sh
   page.el('#photo-input').files = [new File([new Uint8Array(8 * 1024 * 1024 + 1)], 'huge.jpg', { type: 'image/jpeg' })];
   page.el('#photo-input').listeners.change();
   assert.equal(page.calls.length, 0, 'Oversized photos use the existing size validation');
+  assert.equal(page.el('#language-step').hidden, true, 'Oversized photos skip the language step');
   assert.match(page.el('#error').textContent, /maximum 8 MB/);
   console.log('PASS: photo input reuses conversion/analysis, clears for reselection, empty selection and size validation');
 })().catch(error => { console.error(error); process.exitCode = 1; });

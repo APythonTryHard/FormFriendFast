@@ -6,6 +6,7 @@ const { boot, flush, fields, reply } = require('./test_persistence_frontend.cjs'
   page.context.file = new File(['fictional HEIC'], 'phone.heic', { type: '' });
   page.el('#image-input').files = [page.context.file];
   page.el('#image-input').listeners.change();
+  page.el('#language-continue').listeners.click();
   assert.equal(page.calls[0]?.url, '/api/convert', 'Picker must convert unknown MIME images before inference');
   page.calls[0].resolve({ ok: true, blob: async () => new Blob(['normalized'], { type: 'image/jpeg' }) });
   await flush();
@@ -18,6 +19,7 @@ const { boot, flush, fields, reply } = require('./test_persistence_frontend.cjs'
   page.context.file = new File(['broken'], 'bad.tiff');
   page.el('#image-input').files = [page.context.file];
   page.el('#image-input').listeners.change();
+  page.el('#language-continue').listeners.click();
   page.calls[0].resolve({ ok: false, json: async () => ({ error: 'This image could not be converted.' }) });
   await flush();
   assert.equal(page.calls.length, 1);
@@ -26,6 +28,7 @@ const { boot, flush, fields, reply } = require('./test_persistence_frontend.cjs'
   page = boot(); await flush();
   page.el('#image-input').files = [new File(['pending'], 'pending.bmp')];
   page.el('#image-input').listeners.change();
+  page.el('#language-continue').listeners.click();
   page.el('#reset-button').listeners.click();
   page.calls[0].resolve({ ok: true, blob: async () => new Blob(['late'], { type: 'image/jpeg' }) });
   await flush();
