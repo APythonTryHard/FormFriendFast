@@ -5,11 +5,12 @@
 .language-picker [hidden]{display:none!important}
 .language-picker-button{display:flex;align-items:center;gap:9px;min-height:44px;max-width:100%;padding:10px 12px;border:1px solid #dce7de;border-radius:12px;background:#fbfdfb;color:#173c30;font:inherit;font-size:13px;cursor:pointer}
 .language-globe{font-size:16px;line-height:1}
-.language-caption{color:#52685c;font-size:12px}
+.language-caption{color:#52685c;font-size:12px;white-space:nowrap}
 .language-current{font-weight:600;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .language-chevron{color:#52685c}
 .language-picker :is(button,input,select):focus-visible{outline:2px solid #20845c;outline-offset:3px}
 .language-picker-panel{position:absolute;right:0;top:calc(100% + 8px);z-index:100;width:min(340px,calc(100vw - 40px));padding:12px;background:#fff;border:1px solid #dce7de;border-radius:14px;box-shadow:0 12px 40px #173c3026}
+.language-panel-note{margin:0 0 10px;font-size:12px;line-height:1.4;color:#63756b}
 .language-search-label{display:block;font-size:12px;font-weight:600;color:#52685c;margin:0 0 6px}
 .language-search{box-sizing:border-box;width:100%;min-height:44px;font:inherit;font-size:16px;padding:10px 12px;color:#173c30;background:#fbfdfb;border:1px solid #cadacf;border-radius:8px}
 .language-options{margin-top:10px;max-height:min(330px,50vh);overflow-y:auto;overscroll-behavior:contain}

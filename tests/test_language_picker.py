@@ -20,6 +20,8 @@ class LanguagePickerMarkupTests(unittest.TestCase):
         self.assertIn('for="language-select"', topbar)
         self.assertIn('data-english="Spanish"', topbar)
         self.assertIn('Español', topbar)
+        self.assertIn('<span>Help in</span>', topbar)
+        self.assertIn('title="Language for form help"', topbar)
         self.assertNotIn('hidden', re.search(r'<select[^>]*>', topbar).group(0))
         self.assertLess(page.index('/static/app.js'), page.index('/static/language-picker.js'))
         self.assertIn('Images and selected PDF pages are sent to Anthropic for analysis.', page)

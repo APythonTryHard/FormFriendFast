@@ -37,11 +37,19 @@ html:has(.upload-sheet[open]){overflow:hidden}
   .brand{flex:none;min-height:44px;padding:0;font-size:20px}
   .topbar-controls{flex:0 1 auto;width:auto;min-width:0;justify-content:flex-end}
   .language-picker,.language-control,.language-control select{min-width:0}
-  .language-control span:not(.language-globe){position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
   .language-control select{max-width:100%;font-size:16px}
   .language-picker-button{min-width:0;max-width:100%;font-size:14px}
-  .language-caption{display:none}
+  .language-control span{flex:none;white-space:nowrap}
+  .language-caption,.language-globe,.language-chevron{flex:none}
   .language-current{min-width:0;max-width:none}
+}
+@media(max-width:380px){
+  .topbar{gap:8px;padding:8px 12px}
+  .brand{font-size:18px}
+  .language-globe{display:none}
+  .language-control,.language-picker-button{gap:5px}
+  .language-picker-button{padding:8px 9px;font-size:13px}
+  .language-caption,.language-control span{font-size:11px}
 }
 
 @media(max-width:650px){

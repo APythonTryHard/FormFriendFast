@@ -18,7 +18,7 @@
   trigger.setAttribute('aria-controls', 'language-picker-panel');
   const globe = make('span', 'language-globe', '🌐');
   globe.setAttribute('aria-hidden', 'true');
-  const caption = make('span', 'language-caption', 'Language');
+  const caption = make('span', 'language-caption', 'Help in');
   const current = make('bdi', 'language-current');
   const chevron = make('span', 'language-chevron', '⌄');
   chevron.setAttribute('aria-hidden', 'true');
@@ -28,7 +28,9 @@
   panel.id = 'language-picker-panel';
   panel.hidden = true;
   panel.setAttribute('role', 'dialog');
-  panel.setAttribute('aria-label', 'Choose language');
+  panel.setAttribute('aria-label', 'Choose help language');
+  const note = make('p', 'language-panel-note');
+  note.id = 'language-picker-note';
   const searchLabel = make('label', 'language-search-label', 'Search languages');
   searchLabel.htmlFor = 'language-picker-search';
   const search = make('input', 'language-search');
@@ -69,8 +71,17 @@
     if (!selected) return;
     current.textContent = selected.textContent.trim();
     current.lang = selected.value;
-    trigger.setAttribute('aria-label', `Language: ${selected.textContent.trim()}`);
+    trigger.setAttribute('aria-label', `Help language: ${selected.textContent.trim()}`);
     choices.forEach(({ option, button }) => button.setAttribute('aria-pressed', String(option.value === select.value)));
+  }
+  // A loaded (or loading) form is re-analyzed when the help language changes.
+  const formLoaded = () => ['#result-state', '#loading-state'].some(selector => {
+    const element = document.querySelector(selector);
+    return Boolean(element && !element.hidden && element.getClientRects().length);
+  });
+  function updateNote() {
+    note.textContent = 'Field names, tips and answers appear in this language.'
+      + (formLoaded() ? ' Changing it re-reads your form.' : '');
   }
   function filter() {
     const query = normalize(search.value.trim());
@@ -85,6 +96,7 @@
   trigger.addEventListener('click', () => {
     if (!panel.hidden) { close(); return; }
     sync();
+    updateNote();
     search.value = '';
     filter();
     panel.hidden = false;
@@ -115,7 +127,7 @@
     if (event.relatedTarget && !picker.contains(event.relatedTarget)) close();
   });
   select.addEventListener('change', sync);
-  panel.append(searchLabel, search, list, empty);
+  panel.append(note, searchLabel, search, list, empty);
   picker.append(trigger, panel);
   sync(); // Defer script runs after app.js restores the canonical native value.
   picker.querySelector('.language-control').hidden = true;

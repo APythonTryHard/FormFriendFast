@@ -18,7 +18,7 @@
     <main class="main-content">
         <header class="topbar"><a class="brand" href="/" aria-label="FormFriend home"><span class="brand-mark">✳</span><span>formfriend<span class="brand-dot">.</span></span></a><div class="topbar-controls">
             <div class="language-picker" id="language-picker">
-                <label class="language-control" for="language-select"><span class="language-globe" aria-hidden="true">🌐</span><span>Language</span><select id="language-select" title="Language for form guidance">
+                <label class="language-control" for="language-select"><span class="language-globe" aria-hidden="true">🌐</span><span>Help in</span><select id="language-select" title="Language for form help">
                     {% for code, names in languages.items() %}<option value="{{ code }}" data-english="{{ names[0] }}"{% if code == 'en' %} selected{% endif %}>{{ names[1] }}</option>{% endfor %}
                 </select></label>
             </div>
