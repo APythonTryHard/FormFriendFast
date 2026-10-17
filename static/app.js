@@ -21,6 +21,7 @@ const askButton = document.querySelector('#ask-button');
 const answer = document.querySelector('#answer');
 const askError = document.querySelector('#ask-error');
 const MAX_QUESTION_CHARS = 300;
+const MAX_CONTEXT_CHARS = 2000;
 const fieldNav = document.querySelector('#field-nav');
 const fieldPrev = document.querySelector('#field-prev');
 const fieldNext = document.querySelector('#field-next');
@@ -389,6 +390,9 @@ async function askSelectedField(event) {
   const payload = { label: field.label, guidance: field.guidance, question, language: languageSelect.value };
   const example = typeof field.example === 'string' ? field.example.trim() : '';
   if (example && example.length <= 60) payload.example = example;
+  // Hidden form summary from analysis (absent in older cached results).
+  const context = typeof cached?.context === 'string' ? cached.context.trim() : '';
+  if (context && context.length <= MAX_CONTEXT_CHARS) payload.context = context;
   askController = new AbortController();
   askButton.textContent = 'Asking…';
   askButton.setAttribute('aria-busy', 'true');
@@ -498,7 +502,9 @@ async function analyze(file, sameDocument = false) {
     const result = await response.json();
     if (current !== generation) return;
     if (!response.ok) throw new Error(result.error || 'Could not analyze this image.');
-    const cached = { fields: result.fields, selected: result.fields[0]?.id ?? null, answers: {} };
+    // `context` is a hidden form summary used only as /api/ask input; never rendered.
+    const context = typeof result.context === 'string' ? result.context : '';
+    const cached = { fields: result.fields, selected: result.fields[0]?.id ?? null, answers: {}, context };
     savedForm.results[key] = cached;
     displayCached(cached);
     storeForm();

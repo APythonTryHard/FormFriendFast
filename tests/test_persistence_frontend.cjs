@@ -37,13 +37,16 @@ async function main() {
   assert.equal(page.el('#language-select').value, 'en', 'Invalid saved language falls back to English');
   page.context.file = new File(['fictional'], 'fictional.png', { type: 'image/png' });
   page.run('analyze(file)');
-  reply(page.calls[0], { fields });
+  reply(page.calls[0], { fields, context: 'Fictional library card form.' });
   await flush();
+  assert.equal(page.run('cachedResult().context'), 'Fictional library card form.', 'Hidden context cached per result');
+  assert.equal(JSON.stringify(page.el('#fields-list').children).includes('Fictional library card form.'), false, 'Context is never rendered');
   page.run('selectField(1)');
   page.el('#ask-input').value = 'Fictional question?';
   page.run('askSelectedField()');
   assert.equal(page.calls[1].url, '/api/ask');
   assert.equal(JSON.parse(page.calls[1].options.body).question, 'Fictional question?');
+  assert.equal(JSON.parse(page.calls[1].options.body).context, 'Fictional library card form.', 'Ask sends cached context');
   reply(page.calls[1], { lines: ['Fictional line one', 'Fictional line two'] });
   await flush();
   page = boot(idb, prefs);
@@ -53,6 +56,7 @@ async function main() {
   assert.match(page.el('#ask-label').textContent, /Fictional city/);
   assert.equal(page.el('#answer').hidden, false);
   assert.equal(page.el('#ask-input').value, 'Fictional question?', 'Saved question restored');
+  assert.equal(page.run('cachedResult().context'), 'Fictional library card form.', 'Context survives reload');
   assert.equal(page.el('#form-preview').src, 'blob:fictional');
   page.run('askSelectedField()');
   assert.equal(page.calls.length, 0, 'Same saved question avoids provider');
@@ -134,6 +138,10 @@ async function main() {
   assert.equal(legacyReload.el('#ask-input').value, '');
   assert.equal(legacyReload.run('JSON.stringify(cachedResult().answers)'), '{}');
   assert.equal(legacyReload.run("'explanations' in cachedResult()"), false);
+  legacyReload.el('#ask-input').value = 'Legacy question?';
+  legacyReload.run('askSelectedField()');
+  assert.equal(legacyReload.calls[0].url, '/api/ask');
+  assert.equal('context' in JSON.parse(legacyReload.calls[0].options.body), false, 'Legacy cache without context sends none');
   console.log('PASS: legacy explanation caches load without errors and are dropped');
 }
 if (require.main === module) main().catch(err => { console.error(err); process.exitCode = 1; });

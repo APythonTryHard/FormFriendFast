@@ -9,7 +9,7 @@ Understand what belongs in each field on a form. Upload an image or PDF, select 
 - PDFs up to 20 pages, with page selection and local rendering.
 - Field overlays and plain-language guidance in 74 selectable languages, with a short fictional example entry where a safe one exists (the model is told to omit examples for IDs, payment, medical, and attestation fields; SSN- and card-shaped values are dropped server-side).
 - On phones, the Fields panel shows one field at a time with previous/next controls; tapping a highlighted box jumps to it.
-- Ask a question about the selected field (desktop and mobile); the latest answer per field is saved.
+- Ask a question about the selected field (desktop and mobile); the latest answer per field is saved. Analysis also produces a hidden summary of the blank form (purpose, sections, printed instructions) that is sent with questions so answers can be fuller; it is never displayed.
 - Per-page/per-language result and answer caching in the browser.
 - The current document survives reloads; **Start over** clears its saved browser record.
 
@@ -46,7 +46,7 @@ Render's Free service can spin down after 15 minutes without inbound traffic, so
 
 ## Privacy and limitations
 
-- Images and selected PDF pages are sent to OpenAI for analysis. Asking about a field sends your question and the field's label, guidance and example.
+- Images and selected PDF pages are sent to OpenAI for analysis. Asking about a field sends your question, the field's label, guidance and example, and the hidden form summary (which describes the blank form and is instructed not to copy filled-in information).
 - The current document, previews, results, and your questions and answers are stored in IndexedDB in the user's browser. Multi-page PDFs also retain their original PDF there. Do not upload sensitive documents on shared browsers; use **Start over** or clear site data afterward.
 - Application code does not write uploaded forms to server files. Extracted content is not printed to application logs; operational status and errors are logged.
 - PDFs are rendered locally before inference. Encrypted PDFs are rejected. Animated or multi-page images use only the first frame/page.

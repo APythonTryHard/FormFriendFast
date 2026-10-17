@@ -108,7 +108,7 @@ class AnalyzeTests(unittest.TestCase):
                 finish_reason="stop", message=SimpleNamespace(content='{"fields":[]}', reasoning="fictional reasoning"))])
             response = self.upload()
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json, {"fields": []})
+        self.assertEqual(response.json, {"fields": [], "context": ""})
         payload = client.return_value.chat.completions.create.call_args.kwargs
         self.assertEqual(payload["response_format"], {"type": "json_object"})
         self.assertFalse(payload["stream"])
@@ -137,7 +137,7 @@ class AnalyzeTests(unittest.TestCase):
             client.return_value.chat.completions.create.return_value = answer
             response = self.upload()
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json, {"fields": []})
+        self.assertEqual(response.json, {"fields": [], "context": ""})
         payload = client.return_value.chat.completions.create.call_args.kwargs
         self.assertEqual(payload["reasoning_effort"], "low")
         self.assertNotIn("extra_body", payload)
@@ -286,7 +286,7 @@ class AnalyzeTests(unittest.TestCase):
             client.return_value.chat.completions.create.return_value = response_stream
             response = self.upload()
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json, {"fields": []})
+        self.assertEqual(response.json, {"fields": [], "context": ""})
 
     def test_raw_model_output_is_not_logged(self):
         raw = '{"fields":[{"label":"Private account number","guidance":"Sensitive guidance","box":[10,20,100,40]}]}'
