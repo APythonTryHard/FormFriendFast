@@ -5,9 +5,10 @@ Understand what belongs in each field on a form. Upload an image or PDF, select 
 ## Features
 
 - Image normalization, including HEIC/HEIF, with an 8 MB upload limit.
-- On touch devices, tapping the upload area offers a photo (library or camera, as the browser allows) or a PDF/file; desktop keeps click-to-choose and drag-and-drop.
+- On Android and other non-iOS touch devices, tapping the upload area offers a photo (library or camera, as the browser allows) or a PDF/file. On iPhone and iPad it opens the native chooser directly, since iOS already shows its own Photo Library / Take Photo / Choose File menu. Desktop keeps click-to-choose and drag-and-drop.
 - PDFs up to 20 pages, with page selection and local rendering.
-- Field overlays and plain-language guidance in 74 selectable languages.
+- Field overlays and plain-language guidance in 74 selectable languages, with a short fictional example entry where a safe one exists (the model is told to omit examples for IDs, payment, medical, and attestation fields; SSN- and card-shaped values are dropped server-side).
+- On phones, the Fields panel shows one field at a time with previous/next controls; tapping a highlighted box jumps to it.
 - Per-page/per-language result and explanation caching in the browser.
 - The current document survives reloads; **Start over** clears its saved browser record.
 

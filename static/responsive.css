@@ -5,6 +5,13 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .field-copy{min-width:0;overflow-wrap:anywhere}
 .drop-zone:focus-visible{outline:2px solid #20845c;outline-offset:3px}
 
+/* Illustrative example line inside each field card. */
+.field-copy .field-example{margin-top:6px;color:#4f6b5b}
+.field-example-label{font-weight:700;color:#258458}
+
+/* Single-field navigation (app.js updateFieldNav); phones only. */
+.field-nav{display:none}
+
 /* Photo-or-file choice on touch devices (upload-choice.js). */
 html:has(.upload-sheet[open]){overflow:hidden}
 .upload-sheet{width:100%;max-width:none;max-height:100%;margin:auto 0 0;padding:0;border:0;background:transparent;color:inherit;overflow:visible}
@@ -73,6 +80,16 @@ html:has(.upload-sheet[open]){overflow:hidden}
   .field-copy strong{margin:3px 0 4px;font-size:14px;line-height:1.35}
   .field-copy span{font-size:13px;line-height:1.5}
   .no-fields{font-size:14px}
+  /* Only the current field; previous/next reach the rest. */
+  .fields-list .field-card:not(.selected){display:none}
+  .fields-list .field-card{margin-bottom:0;cursor:default}
+  .field-nav:not([hidden]){display:flex;align-items:center;gap:4px;margin-left:auto}
+  .fields-panel .panel-heading:has(.field-nav:not([hidden])) .count{display:none}
+  .field-nav-button{display:grid;place-items:center;width:44px;height:44px;padding:0 0 3px;border:1px solid #cbe5d4;border-radius:12px;background:#f5fbf6;color:#258458;font-size:24px;line-height:1;cursor:pointer}
+  .field-nav-button:active:not(:disabled){background:#e7f2e8}
+  .field-nav-button:disabled{border-color:#e9eee9;background:#fff;color:#c2cfc6;cursor:default}
+  .field-nav-button:focus-visible{outline:2px solid #20845c;outline-offset:2px}
+  .field-position{min-width:4.5em;color:#294637;font-size:14px;font-weight:650;text-align:center;font-variant-numeric:tabular-nums}
   .error{margin:0 12px 12px;font-size:14px;line-height:1.5}
 }
 @media(max-width:650px) and (pointer:coarse){.drop-hint{display:none}}

@@ -19,7 +19,7 @@ class FakeElement {
   focus() { this.world.focused = this; }
 }
 
-function makeWorld({ coarse, dialogSupport = true }) {
+function makeWorld({ coarse, dialogSupport = true, navigator = undefined }) {
   const world = { opened: [], focused: null, coarse };
   const el = (id, parent, attrs) => { const node = new FakeElement(id, parent, attrs); node.world = world; return node; };
   const dropZone = el('drop-zone', null, { tagName: 'LABEL' });
@@ -54,7 +54,7 @@ function makeWorld({ coarse, dialogSupport = true }) {
   const changeListeners = [];
   const context = vm.createContext({
     document: { querySelector: selector => nodes[selector] || null },
-    window: { matchMedia: query => ({ get matches() { return query.includes('coarse') ? world.coarse : false; }, addEventListener: (_type, fn) => changeListeners.push(fn) }) },
+    window: { navigator, matchMedia: query => ({ get matches() { return query.includes('coarse') ? world.coarse : false; }, addEventListener: (_type, fn) => changeListeners.push(fn) }) },
   });
   vm.runInContext(source, context);
   return { world, dropZone, fileInput, photoInput, sheet, photoChoice, fileChoice, cancel, tap, key, changeListeners };
@@ -126,6 +126,30 @@ function makeWorld({ coarse, dialogSupport = true }) {
   const event = page.tap(page.dropZone);
   assert.equal(event.defaultPrevented, false);
   assert.deepEqual(page.world.opened, ['image-input']);
+}
+// iPhone and iPad (including iPadOS reporting MacIntel): iOS already shows its
+// own photo/camera/file menu, so the native full-type input opens directly.
+for (const navigator of [
+  { userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)', platform: 'iPhone', maxTouchPoints: 5 },
+  { userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)', platform: 'MacIntel', maxTouchPoints: 5 },
+]) {
+  const page = makeWorld({ coarse: true, navigator });
+  assert.equal(page.dropZone.attributes['aria-haspopup'], undefined, 'iOS never advertises the custom sheet');
+  const event = page.tap(page.dropZone);
+  assert.equal(event.defaultPrevented, false, 'iOS keeps native label activation');
+  assert.equal(page.sheet.open, false, 'iOS skips the redundant choice sheet');
+  assert.deepEqual(page.world.opened, ['image-input'], 'iOS opens the full image/PDF input directly');
+  page.key(page.dropZone, 'Enter');
+  assert.deepEqual(page.world.opened, ['image-input', 'image-input'], 'Keyboard opens the native input on iOS');
+}
+// A real Mac (no touch points) and Android keep their previous behavior.
+{
+  const mac = makeWorld({ coarse: false, navigator: { userAgent: 'Macintosh', platform: 'MacIntel', maxTouchPoints: 0 } });
+  mac.tap(mac.dropZone);
+  assert.deepEqual(mac.world.opened, ['image-input']);
+  const android = makeWorld({ coarse: true, navigator: { userAgent: 'Mozilla/5.0 (Linux; Android 15)', platform: 'Linux armv8l', maxTouchPoints: 5 } });
+  android.tap(android.dropZone);
+  assert.equal(android.sheet.open, true, 'Non-iOS touch devices still get the photo/file choice');
 }
 console.log('PASS: desktop native picker + keyboard, mobile photo/file choice sheet, backdrop/cancel dismissal, no swallowed file click, pointer change, no-dialog fallback');
 

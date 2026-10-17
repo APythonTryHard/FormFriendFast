@@ -18,6 +18,13 @@ const explainLabel = document.querySelector('#explain-label');
 const explainButton = document.querySelector('#explain-button');
 const explanation = document.querySelector('#explanation');
 const explainError = document.querySelector('#explain-error');
+const fieldNav = document.querySelector('#field-nav');
+const fieldPrev = document.querySelector('#field-prev');
+const fieldNext = document.querySelector('#field-next');
+const fieldPosition = document.querySelector('#field-position');
+// Phones (responsive.css <=650px) show only the selected field card plus
+// previous/next controls; wider layouts keep the full list.
+const phoneLayout = typeof window.matchMedia === 'function' ? window.matchMedia('(max-width: 650px)') : null;
 let objectUrl = null;
 let controller = null;
 let generation = 0;
@@ -199,6 +206,7 @@ function clear(keepSaved = false) {
   if (photoInput) photoInput.value = '';
   boxLayer.replaceChildren();
   fieldsList.replaceChildren();
+  if (fieldNav) fieldNav.hidden = true;
   emptyState.hidden = false;
   loadingState.hidden = true;
   resultState.hidden = true;
@@ -225,7 +233,10 @@ function selectField(id) {
     element.classList.toggle('selected', Number(element.dataset.fieldId) === id);
   }
   const card = fieldsList.querySelector(`[data-field-id="${id}"]`);
-  card?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  // On phones the single visible card swaps in place; scrolling would pull the
+  // user away from the form preview they just tapped.
+  if (!phoneLayout?.matches) card?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  updateFieldNav();
   const cached = cachedResult();
   const lines = cached?.explanations[id];
   if (lines) {
@@ -236,6 +247,21 @@ function selectField(id) {
     cached.selected = id;
     storeForm();
   }
+}
+
+function updateFieldNav() {
+  if (!fieldNav) return;
+  const index = currentFields.indexOf(selectedField);
+  fieldNav.hidden = currentFields.length < 2 || index < 0;
+  if (fieldNav.hidden) return;
+  fieldPosition.textContent = `${index + 1} / ${currentFields.length}`;
+  fieldPrev.disabled = index === 0;
+  fieldNext.disabled = index === currentFields.length - 1;
+}
+
+function stepField(offset) {
+  const next = currentFields[currentFields.indexOf(selectedField) + offset];
+  if (next) selectField(next.id);
 }
 
 function showFields(fields) {
@@ -252,6 +278,7 @@ function showFields(fields) {
   document.querySelector('#field-count').textContent = fields.length;
   boxLayer.replaceChildren();
   fieldsList.replaceChildren();
+  updateFieldNav();
   if (!fields.length) {
     const note = document.createElement('p');
     note.className = 'no-fields';
@@ -287,6 +314,19 @@ function showFields(fields) {
     const guidance = document.createElement('span');
     guidance.textContent = field.guidance;
     copy.append(label, guidance);
+    // Optional, model-supplied illustrative sample (absent in older cached
+    // results). Strings are appended as text nodes, never parsed as HTML.
+    const exampleText = typeof field.example === 'string' ? field.example.trim() : '';
+    if (exampleText) {
+      const example = document.createElement('span');
+      example.className = 'field-example';
+      const exampleLabel = document.createElement('b');
+      exampleLabel.className = 'field-example-label';
+      exampleLabel.lang = 'en';
+      exampleLabel.textContent = 'Example:';
+      example.append(exampleLabel, ` ${exampleText}`);
+      copy.append(example);
+    }
     card.append(badge, copy);
     card.addEventListener('click', () => selectField(field.id));
     fieldsList.append(card);
@@ -446,6 +486,8 @@ pageSelect.addEventListener('change', () => selectPdfPage(Number(pageSelect.valu
 input.addEventListener('change', () => uploadImage(input.files[0]));
 photoInput?.addEventListener('change', () => uploadImage(photoInput.files[0]));
 explainButton.addEventListener('click', explainSelectedField);
+fieldPrev?.addEventListener('click', () => stepField(-1));
+fieldNext?.addEventListener('click', () => stepField(1));
 resetButton.addEventListener('click', () => clear());
 for (const event of ['dragenter', 'dragover']) dropZone.addEventListener(event, e => { e.preventDefault(); dropZone.classList.add('dragging'); });
 for (const event of ['dragleave', 'drop']) dropZone.addEventListener(event, e => { e.preventDefault(); dropZone.classList.remove('dragging'); });

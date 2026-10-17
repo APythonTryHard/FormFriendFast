@@ -54,6 +54,40 @@ class AnalyzeTests(unittest.TestCase):
         self.assertNotIn("Checking the image", response.get_data(as_text=True))
         self.assertEqual(response.headers["Cache-Control"], "no-store")
 
+    def test_short_examples_are_kept_and_unsafe_or_invalid_examples_are_omitted(self):
+        box = [10, 20, 100, 40]
+        fields = [
+            {"label": "Full name", "guidance": "Your name.", "box": box, "example": "  Alex   Smith "},
+            {"label": "Phone", "guidance": "Your phone.", "box": box, "example": "(555) 555-0123"},
+            {"label": "Signature", "guidance": "Sign here.", "box": box, "example": ""},
+            {"label": "SSN", "guidance": "Your SSN.", "box": box, "example": "123-45-6789"},
+            {"label": "Card", "guidance": "Card number.", "box": box, "example": "4111 1111 1111 1111"},
+            {"label": "Notes", "guidance": "Notes.", "box": box, "example": "x" * 61},
+            {"label": "City", "guidance": "City.", "box": box, "example": "Line one\nLine two"},
+            {"label": "Age", "guidance": "Age.", "box": box, "example": 42},
+            {"label": "Email", "guidance": "Email.", "box": box},
+        ]
+        with patch.dict("app.os.environ", {"OPENAI_API_KEY": "test-key"}), patch("app.OpenAI") as client, redirect_stdout(io.StringIO()):
+            client.return_value.chat.completions.create.return_value = FakeResponse(fields)
+            response = self.upload()
+        self.assertEqual(response.status_code, 200)
+        examples = [field.get("example") for field in response.json["fields"]]
+        self.assertEqual(examples, ["Alex Smith", "(555) 555-0123", None, None, None, None, None, None, None])
+        self.assertNotIn("example", response.json["fields"][2], "Empty examples are omitted, not sent as blanks")
+        system = client.return_value.chat.completions.create.call_args.kwargs["messages"][0]["content"]
+        self.assertIn('"example"', system)
+        self.assertIn("examples in English", system)
+
+    def test_bracketless_fallback_accepts_optional_example(self):
+        raw = '{"fields": {"label": "Name", "guidance": "Your name", "box": [10, 20, 100, 40], "example": "Alex Smith"}, {"label": "Date", "guidance": "Today", "box": [10, 50, 100, 70]}}'
+        completion = SimpleNamespace(choices=[SimpleNamespace(finish_reason="stop", message=SimpleNamespace(content=raw))])
+        with patch.dict("app.os.environ", {"OPENAI_API_KEY": "test-key"}), patch("app.OpenAI") as client, redirect_stdout(io.StringIO()):
+            client.return_value.chat.completions.create.return_value = completion
+            response = self.upload()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json["fields"][0]["example"], "Alex Smith")
+        self.assertNotIn("example", response.json["fields"][1])
+
     def test_openai_luna_request_uses_low_reasoning_without_provider_extensions(self):
         with tempfile.TemporaryDirectory() as directory, patch("app.KEY_FILE", Path(directory) / "missing"), patch.dict("app.os.environ", {"OPENAI_API_KEY": "openai-test-key"}, clear=True), patch("app.OpenAI") as client, redirect_stdout(io.StringIO()):
             client.return_value.chat.completions.create.return_value = FakeResponse([])
