@@ -1,0 +1,35 @@
+// Conversion lifecycle with mocked HTTP; no provider requests.
+const assert = require('node:assert/strict');
+const { boot, flush, fields, reply } = require('./test_persistence_frontend.cjs');
+(async () => {
+  let page = boot(); await flush();
+  page.context.file = new File(['fictional HEIC'], 'phone.heic', { type: '' });
+  page.el('#image-input').files = [page.context.file];
+  page.el('#image-input').listeners.change();
+  assert.equal(page.calls[0]?.url, '/api/convert', 'Picker must convert unknown MIME images before inference');
+  page.calls[0].resolve({ ok: true, blob: async () => new Blob(['normalized'], { type: 'image/jpeg' }) });
+  await flush();
+  assert.equal(page.calls[1].url, '/api/analyze');
+  assert.equal(page.calls[1].options.body.get('image').type, 'image/jpeg');
+  reply(page.calls[1], { fields }); await flush();
+  assert.equal(page.el('#result-state').hidden, false);
+  assert.equal(page.el('#filename').textContent, 'phone.heic');
+  page = boot(); await flush();
+  page.context.file = new File(['broken'], 'bad.tiff');
+  page.el('#image-input').files = [page.context.file];
+  page.el('#image-input').listeners.change();
+  page.calls[0].resolve({ ok: false, json: async () => ({ error: 'This image could not be converted.' }) });
+  await flush();
+  assert.equal(page.calls.length, 1);
+  assert.equal(page.el('#empty-state').hidden, false);
+  assert.match(page.el('#error').textContent, /could not be converted/);
+  page = boot(); await flush();
+  page.el('#image-input').files = [new File(['pending'], 'pending.bmp')];
+  page.el('#image-input').listeners.change();
+  page.el('#reset-button').listeners.click();
+  page.calls[0].resolve({ ok: true, blob: async () => new Blob(['late'], { type: 'image/jpeg' }) });
+  await flush();
+  assert.equal(page.calls.length, 1, 'Reset must prevent late conversion from triggering inference');
+  assert.equal(page.el('#result-state').hidden, true);
+  console.log('PASS: image picker conversion, standard JPEG inference, safe conversion error, reset race');
+})().catch(err => { console.error(err); process.exitCode = 1; });

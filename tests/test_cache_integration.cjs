@@ -1,0 +1,34 @@
+// Focused integration edges: real reset event arguments and expanded RTL language.
+const assert = require('node:assert/strict');
+const { IDBFactory } = require('fake-indexeddb');
+const { boot, flush, fields, reply } = require('./test_persistence_frontend.cjs');
+(async () => {
+  const db = new IDBFactory(), preferences = new Map();
+  const page = boot(db, preferences);
+  await flush();
+  page.context.file = new File(['fictional'], 'fictional.png', { type: 'image/png' });
+  page.run('analyze(file)');
+  reply(page.calls[0], { fields });
+  await flush();
+  page.el('#reset-button').listeners.click({ type: 'click' });
+  await flush();
+  const reloaded = boot(db, preferences);
+  await flush();
+  assert.equal(reloaded.el('#result-state').hidden, true, 'Clicking Start over must erase the saved form, not just hide it');
+  assert.equal(reloaded.calls.length, 0, 'Start over must not restart the saved image on reload');
+  reloaded.el('#language-select').options.push({ value: 'ps' });
+  reloaded.change('ps');
+  reloaded.context.file = new File(['fictional'], 'fictional.png', { type: 'image/png' });
+  reloaded.run('analyze(file)');
+  reply(reloaded.calls[0], { fields });
+  await flush();
+  assert.equal(reloaded.el('#fields-list').dir, 'rtl', 'Pashto guidance must use right-to-left direction');
+  reloaded.change('fr');
+  reloaded.calls[1].resolve({ ok: false, json: async () => ({ error: 'Fictional provider unavailable' }) });
+  await flush();
+  reloaded.change('ps');
+  await flush();
+  assert.equal(reloaded.calls.length, 2, 'A failed new-language request must not delete previous cached results');
+  assert.equal(reloaded.el('#result-state').hidden, false, 'Previous cached language must still be usable after an error');
+  console.log('PASS: actual Start over clears persistent data; Pashto RTL; language-request errors preserve cached form');
+})().catch(error => { console.error(error); process.exitCode = 1; });

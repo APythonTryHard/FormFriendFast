@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>FormFriend — Know what goes where</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='loading.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='language.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='document.css') }}">
+    <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='language-picker.js') }}" defer></script>
+</head>
+<body>
+<div class="app-shell">
+    <main class="main-content">
+        <header class="topbar"><a class="brand" href="/" aria-label="FormFriend home"><span class="brand-mark">✳</span><span>formfriend<span class="brand-dot">.</span></span></a><div class="topbar-controls">
+            <div class="language-picker" id="language-picker">
+                <label class="language-control" for="language-select"><span class="language-globe" aria-hidden="true">🌐</span><span>Language</span><select id="language-select" title="Language for form guidance">
+                    {% for code, names in languages.items() %}<option value="{{ code }}" data-english="{{ names[0] }}"{% if code == 'en' %} selected{% endif %}>{{ names[1] }}</option>{% endfor %}
+                </select></label>
+            </div>
+        </div></header>
+        <div class="content">
+            <div class="intro"><h1>Understand your <em>form.</em></h1></div>
+            <section class="workspace" aria-label="Form workspace">
+                <div class="workspace-header"><h2>Form</h2><label id="page-control" hidden>Page <select id="page-select" aria-label="PDF page"></select></label><button id="reset-button" class="text-button" type="button" hidden>↻ &nbsp; Start over</button></div>
+                <p id="storage-notice" class="guidance-note storage-disclosure" role="status" hidden></p>
+                <div id="empty-state" class="empty-state">
+                    <label id="drop-zone" class="drop-zone" for="image-input"><input id="image-input" type="file" accept="application/pdf,.pdf,image/*,.heic,.heif,.avif,.bmp,.tif,.tiff,.gif,.ico,.jp2,.jxl,.psd,.tga,.ppm,.pgm,.pbm,.qoi" hidden><span class="upload-icon">⇧</span><strong>Choose an image or PDF</strong><span>or drop it here</span><small>Images or PDF · Max 8 MB · PDFs up to 20 pages</small><small>Images and selected PDF pages are sent to OpenAI for analysis.</small><small>Your current document is saved in this browser. Start over deletes it.</small><small>Animated or multi-page images use the first frame/page; PDFs have a page selector.</small></label>
+                </div>
+                <div id="loading-state" class="loading-state" role="status" aria-live="polite" hidden>
+                    <div class="loading-spinner" aria-hidden="true"></div>
+                    <h3 id="loading-title">Analyzing form…</h3>
+                    <p><strong id="loading-filename"></strong></p>
+                    <div class="progress-track" role="progressbar" aria-label="Analyzing form" aria-valuetext="Analyzing with OpenAI"><div class="progress-motion"></div></div>
+                </div>
+                <div id="result-state" class="result-state" hidden>
+                    <div class="preview-panel"><div class="panel-heading"><h3 id="filename">Form image</h3></div><div class="image-stage"><div id="image-wrap" class="image-wrap"><img id="form-preview" alt="Uploaded form preview"><div id="box-layer" class="box-layer"></div></div></div></div>
+                    <div class="fields-panel">
+                        <div class="panel-heading"><h3>Fields <span id="field-count" class="count">0</span></h3></div>
+                        <p class="guidance-note">AI can make mistakes. Check your form.</p>
+                        <section id="explain-panel" class="explain-panel" aria-label="Selected field explanation" hidden>
+                            <div class="explain-heading"><strong id="explain-label"></strong><button id="explain-button" class="explain-button" type="button">Explain</button></div>
+                            <p class="explain-disclosure">Sends this field’s label and guidance to OpenAI.</p>
+                            <p id="explanation" class="explanation" aria-live="polite" hidden></p>
+                            <p id="explain-error" class="explain-error" role="alert" hidden></p>
+                        </section>
+                        <div id="fields-list" class="fields-list"></div>
+                    </div>
+                </div>
+                <div id="error" class="error" role="alert" hidden></div>
+            </section>
+        </div>
+    </main>
+</div>
+</body>
+</html>

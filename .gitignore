@@ -1,0 +1,31 @@
+# Local environments and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Credentials and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+openai-key
+
+# Editors and operating system
+.idea/
+.vscode/
+.DS_Store
+
+# Generated output and uploaded documents
+build/
+dist/
+*.egg-info/
+node_modules/
+playwright-report/
+test-results/
+uploads/

@@ -1,0 +1,68 @@
+// Run against the existing local server; requires Playwright (NODE_PATH is supported).
+const assert = require('node:assert/strict');
+const { chromium } = require('playwright');
+(async () => {
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const context = await browser.newContext();
+    await context.addInitScript(() => localStorage.setItem('formfriend-language', 'es'));
+    const page = await context.newPage();
+    let apiCalls = 0;
+    const errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    await page.route('**/api/**', route => { apiCalls++; return route.abort(); });
+    await page.goto('http://127.0.0.1:5001');
+    const trigger = page.locator('#language-picker-button');
+    assert.equal(await trigger.count(), 1, 'Progressive language picker must be created');
+    assert.match(await trigger.innerText(), /Español/, 'Initial restored preference must appear');
+    assert.equal(await page.locator('#language-select option').count(), 74);
+    assert.equal(await page.locator('.model-pill').count(), 0);
+    assert.equal(await page.locator('#language-select').isVisible(), false);
+    await trigger.click();
+    const search = page.locator('#language-picker-search');
+    assert.equal(await search.evaluate(el => el === document.activeElement), true);
+    await search.fill('Spanish');
+    assert.equal(await page.locator('.language-option:visible').count(), 1);
+    await search.fill('العربية');
+    assert.equal(await page.locator('.language-option:visible').count(), 1);
+    await page.evaluate(() => {
+      window.pickerChanges = 0;
+      document.querySelector('#language-select').addEventListener('change', () => window.pickerChanges++);
+    });
+    await search.press('ArrowDown');
+    await page.keyboard.press('Enter');
+    assert.equal(await page.locator('#language-select').inputValue(), 'ar');
+    assert.equal(await page.evaluate(() => window.pickerChanges), 1);
+    assert.match(await trigger.innerText(), /العربية/);
+    assert.equal(await trigger.evaluate(el => el === document.activeElement), true);
+    await page.selectOption('#language-select', 'fr', { force: true });
+    assert.match(await trigger.innerText(), /Français/);
+    await trigger.click();
+    await search.fill('not-a-language');
+    assert.equal(await page.locator('#language-picker-empty').isVisible(), true);
+    await search.press('Escape');
+    assert.equal(await trigger.getAttribute('aria-expanded'), 'false');
+    assert.equal(await trigger.evaluate(el => el === document.activeElement), true);
+    await trigger.click();
+    await page.locator('h1').click();
+    assert.equal(await trigger.getAttribute('aria-expanded'), 'false');
+    await page.setViewportSize({ width: 360, height: 740 });
+    await trigger.click();
+    const bounds = await page.locator('#language-picker-panel').boundingBox();
+    assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= 360, 'Mobile panel must fit viewport');
+    assert.ok((await trigger.boundingBox()).height >= 44, 'Touch target must be at least 44px');
+    await search.fill('French');
+    const option = page.locator('.language-option:visible');
+    const sizes = await option.evaluate(el => [getComputedStyle(el.querySelector('.language-native')).fontSize, getComputedStyle(el.querySelector('.language-english')).fontSize]);
+    assert.ok(parseFloat(sizes[0]) > parseFloat(sizes[1]));
+    assert.equal(apiCalls, 0);
+    assert.deepEqual(errors, []);
+    const fallbackContext = await browser.newContext({ javaScriptEnabled: false });
+    const fallback = await fallbackContext.newPage();
+    await fallback.goto('http://127.0.0.1:5001');
+    assert.equal(await fallback.locator('#language-select').isVisible(), true);
+    assert.equal(await fallback.locator('#language-select option').count(), 74);
+    await fallbackContext.close();
+    console.log('PASS live :5001: 74 choices, restored preference, native/English search, canonical change, keyboard/focus, Escape/outside close, mobile CSS, no-JS fallback; zero API calls or JS errors');
+  } finally { await browser.close(); }
+})().catch(error => { console.error(error); process.exitCode = 1; });
