@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 from PIL import Image
 
-from app import app, clean_context
+from app import ASK_PROMPT, app, clean_context
 
 FIELD = {"label": "Full name", "guidance": "Enter your full name.", "box": [10, 20, 100, 80]}
 
@@ -82,6 +82,35 @@ class FormContextTests(unittest.TestCase):
         self.assertIn("NEVER copy", system)
         self.assertIn('Always write "context" in English', system)
         self.assertIn("Spanish", system)
+
+    def test_long_guidance_is_truncated_to_600_and_accepted_by_ask(self):
+        response = self.analyze_obj({"fields": [{**FIELD, "guidance": "  " + "G" * 900 + "  "}], "context": ""})
+        self.assertEqual(response.status_code, 200)
+        guidance = response.json["fields"][0]["guidance"]
+        self.assertEqual(guidance, "G" * 600)
+        completion = SimpleNamespace(choices=[SimpleNamespace(finish_reason="stop", message=SimpleNamespace(content=json.dumps({"lines": ["Write your full name."]})))])
+        with patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "fictional-test-key"}, clear=True), patch("ai_client.OpenAI") as client:
+            client.return_value.chat.completions.create.return_value = completion
+            ask = app.test_client().post("/api/ask", json={"label": "Full name", "guidance": guidance, "question": "What goes here?"})
+        self.assertEqual(ask.status_code, 200)
+        self.assertEqual(ask.json, {"lines": ["Write your full name."]})
+
+    def test_prompt_requests_one_to_two_plain_sentences_of_guidance(self):
+        self.analyze_obj({"fields": [], "context": ""})
+        system = self.create.call_args.kwargs["messages"][0]["content"]
+        self.assertIn('"guidance": 1 to 2 full, plain-language sentences', system)
+        self.assertIn("at most 300 characters", system)
+        self.assertIn("written simply for a beginner", system)
+        self.assertNotIn("a short description of what belongs there", system)
+
+    def test_ask_prompt_requires_basic_plain_language(self):
+        self.assertIn("someone who only understands basic terms", ASK_PROMPT)
+        self.assertIn("5th to 6th grade reading level", ASK_PROMPT)
+        self.assertIn("no jargon", ASK_PROMPT)
+        self.assertIn("explain what it means in simple words", ASK_PROMPT)
+        for rule in ("1 to 5", "300 characters", "untrusted data", "Do not invent personal facts",
+                     "official instructions", "only help with this form field", "'lines'"):
+            self.assertIn(rule, ASK_PROMPT)
 
     def test_clean_context_unit(self):
         self.assertEqual(clean_context(None), "")
