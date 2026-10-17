@@ -45,12 +45,12 @@ class AnalyzeTests(unittest.TestCase):
         payload = client.return_value.chat.completions.create.call_args.kwargs
         self.assertEqual(client.call_args.kwargs["api_key"], "test-key")
         self.assertEqual(client.call_args.kwargs["base_url"], "https://api.openai.com/v1")
-        self.assertEqual(payload["model"], "gpt-6-luna")
+        self.assertEqual(payload["model"], "gpt-6.1-sol")
         self.assertEqual(payload["max_completion_tokens"], 16_384)
         image_url = payload["messages"][1]["content"][1]["image_url"]["url"]
         self.assertTrue(image_url.startswith("data:image/jpeg;base64,"))
         self.assertFalse(payload["stream"])
-        self.assertIn('"fields"', output.getvalue())
+        self.assertIn("[FormFriend] Parsed 1 fields", output.getvalue())
         self.assertNotIn("Checking the image", response.get_data(as_text=True))
         self.assertEqual(response.headers["Cache-Control"], "no-store")
 
@@ -62,7 +62,7 @@ class AnalyzeTests(unittest.TestCase):
         self.assertEqual(client.call_args.kwargs["api_key"], "openai-test-key")
         self.assertEqual(client.call_args.kwargs["base_url"], "https://api.openai.com/v1")
         payload = client.return_value.chat.completions.create.call_args.kwargs
-        self.assertEqual(payload["model"], "gpt-6-luna")
+        self.assertEqual(payload["model"], "gpt-6.1-sol")
         self.assertEqual(payload["reasoning_effort"], "low")
         self.assertEqual(payload["max_completion_tokens"], 16_384)
         self.assertNotIn("max_tokens", payload)
@@ -117,7 +117,7 @@ class AnalyzeTests(unittest.TestCase):
             requests.append(json.loads(request.content))
             urls.append(str(request.url))
             return httpx.Response(200, json={"id": "chat-1", "object": "chat.completion", "created": 1,
-                                             "model": "gpt-6-luna", "choices": [{"index": 0,
+                                             "model": "gpt-6.1-sol", "choices": [{"index": 0,
                                              "message": {"role": "assistant", "content": '{"fields":[]}', "reasoning": "private thought"},
                                              "finish_reason": "stop"}]})
 
@@ -128,7 +128,7 @@ class AnalyzeTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json["fields"], [])
         self.assertEqual(urls, ["https://api.openai.com/v1/chat/completions"])
-        self.assertEqual(requests[0]["model"], "gpt-6-luna")
+        self.assertEqual(requests[0]["model"], "gpt-6.1-sol")
         self.assertEqual(requests[0]["reasoning_effort"], "low")
         self.assertNotIn("chat_template_kwargs", requests[0])
         self.assertEqual(requests[0]["max_completion_tokens"], 16_384)
@@ -254,8 +254,8 @@ class AnalyzeTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json, {"fields": []})
 
-    def test_complete_raw_model_output_is_labeled_before_parsing(self):
-        raw = '  ```json\n{"fields": []}\n```  '
+    def test_raw_model_output_is_not_logged(self):
+        raw = '{"fields":[{"label":"Private account number","guidance":"Sensitive guidance","box":[10,20,100,40]}]}'
         response_stream = FakeResponse([])
         response_stream.choices[0].message.content = raw
         output = io.StringIO()
@@ -263,9 +263,10 @@ class AnalyzeTests(unittest.TestCase):
             client.return_value.chat.completions.create.return_value = response_stream
             response = self.upload()
         self.assertEqual(response.status_code, 200)
-        self.assertIn(f"[FormFriend] Raw gpt-6-luna output before parsing: {raw!r}", output.getvalue())
-        self.assertIn("[FormFriend] Parsed 0 fields", output.getvalue())
-        self.assertNotIn("Raw gpt-6-luna output", response.get_data(as_text=True))
+        self.assertNotIn("Private account number", output.getvalue())
+        self.assertNotIn("Sensitive guidance", output.getvalue())
+        self.assertNotIn("Raw gpt-6.1-sol output", output.getvalue())
+        self.assertIn("[FormFriend] Parsed 1 fields", output.getvalue())
 
     def test_complete_unbracketed_field_objects_with_numbered_box_are_recovered(self):
         answer = ('```json\n{"fields": '
@@ -313,11 +314,11 @@ class AnalyzeTests(unittest.TestCase):
             response = self.upload()
         self.assertEqual(response.status_code, 503)
         self.assertNotIn("private path", response.get_data(as_text=True))
-        self.assertIn("gpt-6-luna", response.json["error"])
+        self.assertIn("gpt-6.1-sol", response.json["error"])
 
     def test_model_name_in_request_and_error_follows_code_setting(self):
         error = APIConnectionError(request=httpx.Request("POST", "https://api.openai.com"), message="offline")
-        for model in ("gpt-6-luna", "alternate-model"):
+        for model in ("gpt-6.1-sol", "alternate-model"):
             with self.subTest(model=model), patch("app.MODEL", model), patch.dict("app.os.environ", {"OPENAI_API_KEY": "test-key"}), patch("app.OpenAI") as client:
                 client.return_value.chat.completions.create.side_effect = error
                 response = self.upload()

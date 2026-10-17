@@ -1,5 +1,4 @@
-"""Local image-form assistant backed by OpenAI vision inference."""
-0
+"""Image-form assistant backed by OpenAI vision inference."""
 import base64
 import io
 import json
@@ -21,7 +20,7 @@ app = Flask(__name__)
 MAX_IMAGE_BYTES = 8 * 1024 * 1024
 # Allow multipart headers in addition to the advertised file-size limit.
 app.config.update(MAX_CONTENT_LENGTH=MAX_IMAGE_BYTES + 64 * 1024, MAX_FORM_MEMORY_SIZE=MAX_IMAGE_BYTES + 64 * 1024)
-MODEL = "gpt-6.1-sol"  # Model selection stays in code. gpt-6.1-sol
+MODEL = "gpt-6.1-sol"  # Shared by analysis and field explanations.
 OPENAI_URL = "https://api.openai.com/v1"
 KEY_FILE = Path.home() / ".config" / "formfriend" / "openai-key"
 MAX_PIXELS = 20_000_000
@@ -80,6 +79,11 @@ def private_responses(response):
 @app.errorhandler(RequestEntityTooLarge)
 def too_large(_error):
     return jsonify(error="Image is too large (maximum 8 MB)."), 413
+
+
+@app.get("/healthz")
+def health():
+    return jsonify(status="ok")
 
 
 @app.get("/")
@@ -242,7 +246,7 @@ Use the key "box" for EVERY field; never use "box2" or numbered keys. Do not inv
     if key_error:
         return key_error
     try:
-        client = OpenAI(base_url=OPENAI_URL, api_key=api_key, timeout=240, max_retries=0)
+        client = OpenAI(base_url=OPENAI_URL, api_key=api_key, timeout=180, max_retries=0)
         completion = client.chat.completions.create(
             model=MODEL,
             messages=[{"role": "system", "content": prompt}, {"role": "user", "content": [
@@ -257,9 +261,6 @@ Use the key "box" for EVERY field; never use "box2" or numbered keys. Do not inv
         raw_answer = (completion.choices[0].message.content or "") if completion.choices else ""
         if len(raw_answer) > 200_000:
             raise ValueError("Model output too large")
-        if raw_answer:
-            print(raw_answer, flush=True)
-        print(f"[FormFriend] Raw {MODEL} output before parsing: {raw_answer!r}", flush=True)
         if not raw_answer:
             raise ValueError("No JSON answer")
         if completion.choices[0].finish_reason != "stop":
@@ -319,7 +320,7 @@ Use the key "box" for EVERY field; never use "box2" or numbered keys. Do not inv
             if any(type(n) is not int for n in box):
                 raise ValueError(f"Invalid field {index}: box coordinates must be integers")
             left, top, right, bottom = box
-            if left < 0 or top < 0 or right > 5000 or bottom > 5000 or right <= left or bottom <= top:
+            if left < 0 or top < 0 or right > 1000 or bottom > 1000 or right <= left or bottom <= top:
                 raise ValueError("Invalid box")
             cleaned.append({"id": len(cleaned), "label": label.strip(), "guidance": guidance.strip(), "box": [left, top, right - left, bottom - top]})
         print(f"[FormFriend] Parsed {len(cleaned)} fields", flush=True)
@@ -350,4 +351,4 @@ Use the key "box" for EVERY field; never use "box2" or numbered keys. Do not inv
 
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5001, debug=True)
+    app.run(host="127.0.0.1", port=int(os.environ.get("PORT", "5001")), debug=False)
