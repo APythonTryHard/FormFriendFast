@@ -5,6 +5,7 @@ Understand what belongs in each field on a form. Upload an image or PDF, select 
 ## Features
 
 - Image normalization, including HEIC/HEIF, with an 8 MB upload limit.
+- On touch devices, tapping the upload area offers a photo (library or camera, as the browser allows) or a PDF/file; desktop keeps click-to-choose and drag-and-drop.
 - PDFs up to 20 pages, with page selection and local rendering.
 - Field overlays and plain-language guidance in 74 selectable languages.
 - Per-page/per-language result and explanation caching in the browser.

@@ -8,8 +8,10 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='loading.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='language.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='document.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='responsive.css') }}">
     <script src="{{ url_for('static', filename='app.js') }}" defer></script>
     <script src="{{ url_for('static', filename='language-picker.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='upload-choice.js') }}" defer></script>
 </head>
 <body>
 <div class="app-shell">
@@ -24,10 +26,11 @@
         <div class="content">
             <div class="intro"><h1>Understand your <em>form.</em></h1></div>
             <section class="workspace" aria-label="Form workspace">
-                <div class="workspace-header"><h2>Form</h2><label id="page-control" hidden>Page <select id="page-select" aria-label="PDF page"></select></label><button id="reset-button" class="text-button" type="button" hidden>↻ &nbsp; Start over</button></div>
+                <div class="workspace-header"><h2>Form</h2><div class="workspace-actions"><label id="page-control" hidden>Page <select id="page-select" aria-label="PDF page"></select></label><button id="reset-button" class="text-button" type="button" hidden>↻ &nbsp; Start over</button></div></div>
                 <p id="storage-notice" class="guidance-note storage-disclosure" role="status" hidden></p>
                 <div id="empty-state" class="empty-state">
-                    <label id="drop-zone" class="drop-zone" for="image-input"><input id="image-input" type="file" accept="application/pdf,.pdf,image/*,.heic,.heif,.avif,.bmp,.tif,.tiff,.gif,.ico,.jp2,.jxl,.psd,.tga,.ppm,.pgm,.pbm,.qoi" hidden><span class="upload-icon">⇧</span><strong>Choose an image or PDF</strong><span>or drop it here</span><small>Images or PDF · Max 8 MB · PDFs up to 20 pages</small><small>Images and selected PDF pages are sent to OpenAI for analysis.</small><small>Your current document is saved in this browser. Start over deletes it.</small><small>Animated or multi-page images use the first frame/page; PDFs have a page selector.</small></label>
+                    <label id="drop-zone" class="drop-zone" for="image-input" role="button" tabindex="0" aria-labelledby="drop-zone-title" aria-describedby="drop-zone-limits drop-zone-privacy drop-zone-storage drop-zone-pages"><input id="image-input" type="file" accept="application/pdf,.pdf,image/*,.heic,.heif,.avif,.bmp,.tif,.tiff,.gif,.ico,.jp2,.jxl,.psd,.tga,.ppm,.pgm,.pbm,.qoi" hidden><span class="upload-icon" aria-hidden="true">⇧</span><strong id="drop-zone-title">Choose an image or PDF</strong><span class="drop-hint">or drop it here</span><small id="drop-zone-limits">Images or PDF · Max 8 MB · PDFs up to 20 pages</small><small id="drop-zone-privacy">Images and selected PDF pages are sent to OpenAI for analysis.</small><small id="drop-zone-storage">Your current document is saved in this browser. Start over deletes it.</small><small id="drop-zone-pages">Animated or multi-page images use the first frame/page; PDFs have a page selector.</small></label>
+                    <input id="photo-input" type="file" accept="image/*" hidden>
                 </div>
                 <div id="loading-state" class="loading-state" role="status" aria-live="polite" hidden>
                     <div class="loading-spinner" aria-hidden="true"></div>
@@ -54,5 +57,12 @@
         </div>
     </main>
 </div>
+<dialog id="upload-sheet" class="upload-sheet" aria-label="Upload form">
+    <div class="upload-sheet-panel">
+        <button class="upload-choice" type="button" data-upload-choice="photo">Take or choose a photo</button>
+        <button class="upload-choice" type="button" data-upload-choice="file">Choose a PDF or file</button>
+        <button class="upload-cancel" type="button" data-upload-cancel>Cancel</button>
+    </div>
+</dialog>
 </body>
 </html>

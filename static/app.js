@@ -1,4 +1,5 @@
 const input = document.querySelector('#image-input');
+const photoInput = document.querySelector('#photo-input');
 const languageSelect = document.querySelector('#language-select');
 const pageSelect = document.querySelector('#page-select');
 const pageControl = document.querySelector('#page-control');
@@ -195,6 +196,7 @@ function clear(keepSaved = false) {
   objectUrl = null;
   preview.removeAttribute('src');
   input.value = '';
+  if (photoInput) photoInput.value = '';
   boxLayer.replaceChildren();
   fieldsList.replaceChildren();
   emptyState.hidden = false;
@@ -442,6 +444,7 @@ languageSelect.addEventListener('change', () => {
 });
 pageSelect.addEventListener('change', () => selectPdfPage(Number(pageSelect.value)));
 input.addEventListener('change', () => uploadImage(input.files[0]));
+photoInput?.addEventListener('change', () => uploadImage(photoInput.files[0]));
 explainButton.addEventListener('click', explainSelectedField);
 resetButton.addEventListener('click', () => clear());
 for (const event of ['dragenter', 'dragover']) dropZone.addEventListener(event, e => { e.preventDefault(); dropZone.classList.add('dragging'); });
