@@ -37,7 +37,7 @@ class AnalyzeTests(unittest.TestCase):
     def test_image_returns_structured_fields_and_sends_vision_request(self):
         fields = [{"label": "Full name", "guidance": "Enter your legal full name.", "box": [100, 200, 500, 280]}]
         output = io.StringIO()
-        with patch.dict("app.os.environ", {"OPENAI_API_KEY": "test-key"}), patch("app.OpenAI") as client, redirect_stdout(output):
+        with patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "test-key"}), patch("ai_client.OpenAI") as client, redirect_stdout(output):
             client.return_value.chat.completions.create.return_value = FakeResponse(fields)
             response = self.upload()
         self.assertEqual(response.status_code, 200)
@@ -67,7 +67,7 @@ class AnalyzeTests(unittest.TestCase):
             {"label": "Age", "guidance": "Age.", "box": box, "example": 42},
             {"label": "Email", "guidance": "Email.", "box": box},
         ]
-        with patch.dict("app.os.environ", {"OPENAI_API_KEY": "test-key"}), patch("app.OpenAI") as client, redirect_stdout(io.StringIO()):
+        with patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "test-key"}), patch("ai_client.OpenAI") as client, redirect_stdout(io.StringIO()):
             client.return_value.chat.completions.create.return_value = FakeResponse(fields)
             response = self.upload()
         self.assertEqual(response.status_code, 200)
@@ -81,7 +81,7 @@ class AnalyzeTests(unittest.TestCase):
     def test_bracketless_fallback_accepts_optional_example(self):
         raw = '{"fields": {"label": "Name", "guidance": "Your name", "box": [10, 20, 100, 40], "example": "Alex Smith"}, {"label": "Date", "guidance": "Today", "box": [10, 50, 100, 70]}}'
         completion = SimpleNamespace(choices=[SimpleNamespace(finish_reason="stop", message=SimpleNamespace(content=raw))])
-        with patch.dict("app.os.environ", {"OPENAI_API_KEY": "test-key"}), patch("app.OpenAI") as client, redirect_stdout(io.StringIO()):
+        with patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "test-key"}), patch("ai_client.OpenAI") as client, redirect_stdout(io.StringIO()):
             client.return_value.chat.completions.create.return_value = completion
             response = self.upload()
         self.assertEqual(response.status_code, 200)
@@ -89,7 +89,7 @@ class AnalyzeTests(unittest.TestCase):
         self.assertNotIn("example", response.json["fields"][1])
 
     def test_openai_luna_request_uses_low_reasoning_without_provider_extensions(self):
-        with tempfile.TemporaryDirectory() as directory, patch("app.KEY_FILE", Path(directory) / "missing"), patch.dict("app.os.environ", {"OPENAI_API_KEY": "openai-test-key"}, clear=True), patch("app.OpenAI") as client, redirect_stdout(io.StringIO()):
+        with tempfile.TemporaryDirectory() as directory, patch("ai_client.OPENAI_KEY_FILE", Path(directory) / "missing"), patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "openai-test-key"}, clear=True), patch("ai_client.OpenAI") as client, redirect_stdout(io.StringIO()):
             client.return_value.chat.completions.create.return_value = FakeResponse([])
             response = self.upload()
         self.assertEqual(response.status_code, 200)
@@ -103,7 +103,7 @@ class AnalyzeTests(unittest.TestCase):
         self.assertNotIn("extra_body", payload)
 
     def test_json_mode_uses_buffered_completion_with_low_reasoning(self):
-        with patch.dict("app.os.environ", {"OPENAI_API_KEY": "test-key"}), patch("app.OpenAI") as client, redirect_stdout(io.StringIO()):
+        with patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "test-key"}), patch("ai_client.OpenAI") as client, redirect_stdout(io.StringIO()):
             client.return_value.chat.completions.create.return_value = SimpleNamespace(choices=[SimpleNamespace(
                 finish_reason="stop", message=SimpleNamespace(content='{"fields":[]}', reasoning="fictional reasoning"))])
             response = self.upload()
@@ -116,7 +116,7 @@ class AnalyzeTests(unittest.TestCase):
         self.assertNotIn("extra_body", payload)
 
     def test_vision_request_uses_json_instructions_as_system_text_with_json_mode(self):
-        with patch.dict("app.os.environ", {"OPENAI_API_KEY": "test-key"}), patch("app.OpenAI") as client, redirect_stdout(io.StringIO()):
+        with patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "test-key"}), patch("ai_client.OpenAI") as client, redirect_stdout(io.StringIO()):
             client.return_value.chat.completions.create.return_value = FakeResponse([])
             response = self.upload()
         self.assertEqual(response.status_code, 200)
@@ -133,7 +133,7 @@ class AnalyzeTests(unittest.TestCase):
         answer = SimpleNamespace(choices=[SimpleNamespace(finish_reason="stop", message=SimpleNamespace(
             content='{"fields":[]}', reasoning="This is reasoning, not JSON"))])
         output = io.StringIO()
-        with patch.dict("app.os.environ", {"OPENAI_API_KEY": "test-key"}), patch("app.OpenAI") as client, redirect_stdout(output):
+        with patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "test-key"}), patch("ai_client.OpenAI") as client, redirect_stdout(output):
             client.return_value.chat.completions.create.return_value = answer
             response = self.upload()
         self.assertEqual(response.status_code, 200)
@@ -157,7 +157,7 @@ class AnalyzeTests(unittest.TestCase):
 
         transport = httpx.MockTransport(respond)
         real_client = OpenAI(api_key="test-key", base_url="https://api.openai.com/v1", http_client=httpx.Client(transport=transport))
-        with patch.dict("app.os.environ", {"OPENAI_API_KEY": "test-key"}), patch("app.OpenAI", return_value=real_client), redirect_stdout(io.StringIO()):
+        with patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "test-key"}), patch("ai_client.OpenAI", return_value=real_client), redirect_stdout(io.StringIO()):
             response = self.upload()
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json["fields"], [])
@@ -173,7 +173,7 @@ class AnalyzeTests(unittest.TestCase):
         real_client.close()
 
     def test_rejects_non_image_even_with_png_name(self):
-        with patch("app.OpenAI") as request:
+        with patch("ai_client.OpenAI") as request:
             response = self.upload(b"not an image")
         self.assertEqual(response.status_code, 400)
         request.assert_not_called()
@@ -185,7 +185,7 @@ class AnalyzeTests(unittest.TestCase):
     def test_rejects_out_of_bounds_model_box(self):
         fields = [{"label": "Name", "guidance": "Your name", "box": [950, 100, 1150, 160]}]
         output = io.StringIO()
-        with patch.dict("app.os.environ", {"OPENAI_API_KEY": "test-key"}), patch("app.OpenAI") as client, redirect_stdout(output):
+        with patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "test-key"}), patch("ai_client.OpenAI") as client, redirect_stdout(output):
             client.return_value.chat.completions.create.return_value = FakeResponse(fields)
             response = self.upload()
         self.assertEqual(response.status_code, 502)
@@ -193,7 +193,7 @@ class AnalyzeTests(unittest.TestCase):
 
     def test_dense_form_with_120_valid_fields_is_accepted(self):
         fields = [{"label": f"Field {number}", "guidance": "Enter the requested value.", "box": [10, 20, 100, 40]} for number in range(120)]
-        with patch.dict("app.os.environ", {"OPENAI_API_KEY": "test-key"}, clear=True), patch("app.OpenAI") as client, redirect_stdout(io.StringIO()):
+        with patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "test-key"}, clear=True), patch("ai_client.OpenAI") as client, redirect_stdout(io.StringIO()):
             client.return_value.chat.completions.create.return_value = FakeResponse(fields)
             response = self.upload()
         self.assertEqual(response.status_code, 200)
@@ -202,7 +202,7 @@ class AnalyzeTests(unittest.TestCase):
     def test_dense_form_limit_still_rejects_more_than_300_fields(self):
         fields = [{"label": f"Field {number}", "guidance": "Enter the requested value.", "box": [10, 20, 100, 40]} for number in range(301)]
         output = io.StringIO()
-        with patch.dict("app.os.environ", {"OPENAI_API_KEY": "test-key"}, clear=True), patch("app.OpenAI") as client, redirect_stdout(output):
+        with patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "test-key"}, clear=True), patch("ai_client.OpenAI") as client, redirect_stdout(output):
             client.return_value.chat.completions.create.return_value = FakeResponse(fields)
             response = self.upload()
         self.assertEqual(response.status_code, 502)
@@ -211,7 +211,7 @@ class AnalyzeTests(unittest.TestCase):
 
     def test_non_array_fields_reports_wrong_type(self):
         output = io.StringIO()
-        with patch.dict("app.os.environ", {"OPENAI_API_KEY": "test-key"}, clear=True), patch("app.OpenAI") as client, redirect_stdout(output):
+        with patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "test-key"}, clear=True), patch("ai_client.OpenAI") as client, redirect_stdout(output):
             client.return_value.chat.completions.create.return_value = FakeResponse({})
             response = self.upload()
         self.assertEqual(response.status_code, 502)
@@ -223,7 +223,7 @@ class AnalyzeTests(unittest.TestCase):
         fields.append({"label": label, "guidance": "Check the printed instructions", "box": [10, 20, 100, 40]})
         lines = ["Use the information requested by this field.", "Consult the source document named on the form.", "Check official instructions if unsure."]
         answer = SimpleNamespace(choices=[SimpleNamespace(finish_reason="stop", message=SimpleNamespace(content=json.dumps({"lines": lines})))])
-        with patch.dict("app.os.environ", {"OPENAI_API_KEY": "fictional-key"}, clear=True), patch("app.OpenAI") as client, redirect_stdout(io.StringIO()):
+        with patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "fictional-key"}, clear=True), patch("ai_client.OpenAI") as client, redirect_stdout(io.StringIO()):
             client.return_value.chat.completions.create.side_effect = [FakeResponse(fields), answer]
             response = self.upload()
             self.assertEqual(response.status_code, 200)
@@ -241,7 +241,7 @@ class AnalyzeTests(unittest.TestCase):
         ]
         for field, reason in cases:
             output = io.StringIO()
-            with self.subTest(reason=reason), patch.dict("app.os.environ", {"OPENAI_API_KEY": "test-key"}, clear=True), patch("app.OpenAI") as client, redirect_stdout(output):
+            with self.subTest(reason=reason), patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "test-key"}, clear=True), patch("ai_client.OpenAI") as client, redirect_stdout(output):
                 client.return_value.chat.completions.create.return_value = FakeResponse([field])
                 response = self.upload()
             self.assertEqual(response.status_code, 502)
@@ -253,7 +253,7 @@ class AnalyzeTests(unittest.TestCase):
         response_stream = FakeResponse([])
         response_stream.choices = []
         output = io.StringIO()
-        with patch.dict("app.os.environ", {"OPENAI_API_KEY": "test-key"}), patch("app.OpenAI") as client, redirect_stdout(output):
+        with patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "test-key"}), patch("ai_client.OpenAI") as client, redirect_stdout(output):
             client.return_value.chat.completions.create.return_value = response_stream
             response = self.upload()
         self.assertEqual(response.status_code, 502)
@@ -264,7 +264,7 @@ class AnalyzeTests(unittest.TestCase):
         answer = FakeResponse([{"label": "Name", "guidance": "Enter a name", "box": [10, 20, 100, 50]}])
         answer.choices[0].finish_reason = "length"
         output = io.StringIO()
-        with patch.dict("app.os.environ", {"OPENAI_API_KEY": "test-key"}), patch("app.OpenAI") as client, redirect_stdout(output):
+        with patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "test-key"}), patch("ai_client.OpenAI") as client, redirect_stdout(output):
             client.return_value.chat.completions.create.return_value = answer
             response = self.upload()
         self.assertEqual(response.status_code, 502)
@@ -274,7 +274,7 @@ class AnalyzeTests(unittest.TestCase):
     def test_json_mode_rejects_reasoning_and_multiple_fenced_answers(self):
         answer = FakeResponse([])
         answer.choices[0].message.content = '```json\n{"fields":[]}\n```\nWait, more fields.\n```json\n{"fields":[]}\n```'
-        with patch.dict("app.os.environ", {"OPENAI_API_KEY": "test-key"}), patch("app.OpenAI") as client, redirect_stdout(io.StringIO()):
+        with patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "test-key"}), patch("ai_client.OpenAI") as client, redirect_stdout(io.StringIO()):
             client.return_value.chat.completions.create.return_value = answer
             response = self.upload()
         self.assertEqual(response.status_code, 502)
@@ -282,7 +282,7 @@ class AnalyzeTests(unittest.TestCase):
     def test_json_code_fence_is_accepted_as_layout(self):
         response_stream = FakeResponse([])
         response_stream.choices[0].message.content = '```json\n{"fields": []}\n```'
-        with patch.dict("app.os.environ", {"OPENAI_API_KEY": "test-key"}), patch("app.OpenAI") as client, redirect_stdout(io.StringIO()):
+        with patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "test-key"}), patch("ai_client.OpenAI") as client, redirect_stdout(io.StringIO()):
             client.return_value.chat.completions.create.return_value = response_stream
             response = self.upload()
         self.assertEqual(response.status_code, 200)
@@ -293,7 +293,7 @@ class AnalyzeTests(unittest.TestCase):
         response_stream = FakeResponse([])
         response_stream.choices[0].message.content = raw
         output = io.StringIO()
-        with patch.dict("app.os.environ", {"OPENAI_API_KEY": "test-key"}), patch("app.OpenAI") as client, redirect_stdout(output):
+        with patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "test-key"}), patch("ai_client.OpenAI") as client, redirect_stdout(output):
             client.return_value.chat.completions.create.return_value = response_stream
             response = self.upload()
         self.assertEqual(response.status_code, 200)
@@ -308,7 +308,7 @@ class AnalyzeTests(unittest.TestCase):
                   '{"label":"Last name","guidance":"Enter a last name","box2":[396,137,693,153]}}\n```')
         response_stream = FakeResponse([])
         response_stream.choices[0].message.content = answer
-        with patch.dict("app.os.environ", {"OPENAI_API_KEY": "test-key"}), patch("app.OpenAI") as client, redirect_stdout(io.StringIO()):
+        with patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "test-key"}), patch("ai_client.OpenAI") as client, redirect_stdout(io.StringIO()):
             client.return_value.chat.completions.create.return_value = response_stream
             response = self.upload()
         self.assertEqual(response.status_code, 200)
@@ -322,7 +322,7 @@ class AnalyzeTests(unittest.TestCase):
         answer = '{"fields": ' + ', '.join(fields) + '}'
         response_stream = FakeResponse([])
         response_stream.choices[0].message.content = answer
-        with patch.dict("app.os.environ", {"OPENAI_API_KEY": "test-key"}), patch("app.OpenAI") as client, redirect_stdout(io.StringIO()):
+        with patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "test-key"}), patch("ai_client.OpenAI") as client, redirect_stdout(io.StringIO()):
             client.return_value.chat.completions.create.return_value = response_stream
             response = self.upload()
         self.assertEqual(response.status_code, 200)
@@ -334,7 +334,7 @@ class AnalyzeTests(unittest.TestCase):
             '{"fields": {"label":"Name","guidance":"Enter a name","box":[10,20,50,80]}, {"label":"Date","guidance":"Enter a date"}}',
         )
         for answer in answers:
-            with self.subTest(answer=answer), patch.dict("app.os.environ", {"OPENAI_API_KEY": "test-key"}), patch("app.OpenAI") as client, redirect_stdout(io.StringIO()):
+            with self.subTest(answer=answer), patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "test-key"}), patch("ai_client.OpenAI") as client, redirect_stdout(io.StringIO()):
                 response_stream = FakeResponse([])
                 response_stream.choices[0].message.content = answer
                 client.return_value.chat.completions.create.return_value = response_stream
@@ -343,17 +343,17 @@ class AnalyzeTests(unittest.TestCase):
 
     def test_model_connection_error_is_safe(self):
         error = APIConnectionError(request=httpx.Request("POST", "https://api.openai.com"), message="private path")
-        with patch.dict("app.os.environ", {"OPENAI_API_KEY": "test-key"}), patch("app.OpenAI") as client:
+        with patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "test-key"}), patch("ai_client.OpenAI") as client:
             client.return_value.chat.completions.create.side_effect = error
             response = self.upload()
         self.assertEqual(response.status_code, 503)
         self.assertNotIn("private path", response.get_data(as_text=True))
         self.assertIn("gpt-6.1-sol", response.json["error"])
 
-    def test_model_name_in_request_and_error_follows_code_setting(self):
+    def test_model_name_in_request_and_error_follows_ai_model_setting(self):
         error = APIConnectionError(request=httpx.Request("POST", "https://api.openai.com"), message="offline")
         for model in ("gpt-6.1-sol", "alternate-model"):
-            with self.subTest(model=model), patch("app.MODEL", model), patch.dict("app.os.environ", {"OPENAI_API_KEY": "test-key"}), patch("app.OpenAI") as client:
+            with self.subTest(model=model), patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "AI_MODEL": model, "OPENAI_API_KEY": "test-key"}), patch("ai_client.OpenAI") as client:
                 client.return_value.chat.completions.create.side_effect = error
                 response = self.upload()
                 self.assertEqual(response.status_code, 503)
@@ -361,7 +361,7 @@ class AnalyzeTests(unittest.TestCase):
                 self.assertIn(model, response.json["error"])
 
     def test_missing_key_does_not_call_provider(self):
-        with tempfile.TemporaryDirectory() as directory, patch("app.KEY_FILE", Path(directory) / "missing"), patch.dict("app.os.environ", {}, clear=True), patch("app.OpenAI") as client:
+        with tempfile.TemporaryDirectory() as directory, patch("ai_client.OPENAI_KEY_FILE", Path(directory) / "missing"), patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low"}, clear=True), patch("ai_client.OpenAI") as client:
             response = self.upload()
         self.assertEqual(response.status_code, 503)
         self.assertIn("OPENAI_API_KEY", response.json["error"])
@@ -372,7 +372,7 @@ class AnalyzeTests(unittest.TestCase):
             key_file = Path(directory) / "openai-key"
             key_file.write_text("file-test-key\n", encoding="utf-8")
             key_file.chmod(0o600)
-            with patch("app.KEY_FILE", key_file), patch.dict("app.os.environ", {}, clear=True), patch("app.OpenAI") as client, redirect_stdout(io.StringIO()):
+            with patch("ai_client.OPENAI_KEY_FILE", key_file), patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low"}, clear=True), patch("ai_client.OpenAI") as client, redirect_stdout(io.StringIO()):
                 client.return_value.chat.completions.create.return_value = FakeResponse([])
                 response = self.upload()
             self.assertEqual(response.status_code, 200)
@@ -383,7 +383,7 @@ class AnalyzeTests(unittest.TestCase):
             key_file = Path(directory) / "openai-key"
             key_file.write_text("file-test-key\n", encoding="utf-8")
             key_file.chmod(0o644)
-            with patch("app.KEY_FILE", key_file), patch.dict("app.os.environ", {}, clear=True), patch("app.OpenAI") as client:
+            with patch("ai_client.OPENAI_KEY_FILE", key_file), patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low"}, clear=True), patch("ai_client.OpenAI") as client:
                 response = self.upload()
             self.assertEqual(response.status_code, 503)
             self.assertIn("chmod 600", response.json["error"])
@@ -392,7 +392,7 @@ class AnalyzeTests(unittest.TestCase):
     def test_provider_http_error_is_not_reported_as_unreachable(self):
         response_data = httpx.Response(401, request=httpx.Request("POST", "https://api.openai.com"), json={"error": "sensitive details"})
         error = APIStatusError("failed", response=response_data, body=response_data.json())
-        with patch.dict("app.os.environ", {"OPENAI_API_KEY": "test-key"}), patch("app.OpenAI") as client:
+        with patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "test-key"}), patch("ai_client.OpenAI") as client:
             client.return_value.chat.completions.create.side_effect = error
             response = self.upload()
         self.assertEqual(response.status_code, 502)
@@ -403,7 +403,7 @@ class AnalyzeTests(unittest.TestCase):
     def test_provider_413_reports_request_size_not_key_access(self):
         response_data = httpx.Response(413, request=httpx.Request("POST", "https://api.openai.com"), json={"error": "sensitive details"})
         error = APIStatusError("failed", response=response_data, body=response_data.json())
-        with patch.dict("app.os.environ", {"OPENAI_API_KEY": "test-key"}), patch("app.OpenAI") as client:
+        with patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "test-key"}), patch("ai_client.OpenAI") as client:
             client.return_value.chat.completions.create.side_effect = error
             response = self.upload()
         self.assertEqual(response.status_code, 502)
@@ -414,20 +414,21 @@ class AnalyzeTests(unittest.TestCase):
 
     def test_slow_model_reports_timeout_not_connection_failure(self):
         error = APITimeoutError(request=httpx.Request("POST", "https://api.openai.com"))
-        with patch.dict("app.os.environ", {"OPENAI_API_KEY": "test-key"}), patch("app.OpenAI") as client:
+        with patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "test-key"}), patch("ai_client.OpenAI") as client:
             client.return_value.chat.completions.create.side_effect = error
             response = self.upload()
         self.assertEqual(response.status_code, 504)
         self.assertIn("longer", response.json["error"])
         self.assertNotIn("Could not reach", response.json["error"])
-        self.assertEqual(client.call_args.kwargs["timeout"], 180)
-        self.assertIn("3 minutes", response.json["error"])
+        self.assertEqual(client.call_args.kwargs["timeout"], 200)
+        self.assertIn("200 seconds", response.json["error"])
 
     def test_page_serves_dashboard(self):
-        response = self.client.get("/")
+        with patch.dict("app.os.environ", {}, clear=True):
+            response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"FormFriend", response.data)
-        self.assertIn(b"Images and selected PDF pages are sent to OpenAI", response.data)
+        self.assertIn(b"Images and selected PDF pages are sent to Anthropic", response.data)
 
 
 
@@ -454,7 +455,7 @@ class AskValidationTests(unittest.TestCase):
         ]
         for payload in cases:
             with self.subTest(payload={k: (v[:20] if isinstance(v, str) else v) for k, v in payload.items()}), \
-                    patch.dict("app.os.environ", {"OPENAI_API_KEY": "fictional-key"}, clear=True), patch("app.OpenAI") as client:
+                    patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "fictional-key"}, clear=True), patch("ai_client.OpenAI") as client:
                 response = self.post(payload)
             self.assertEqual(response.status_code, 400)
             self.assertIn("error", response.json)
@@ -463,7 +464,7 @@ class AskValidationTests(unittest.TestCase):
     def test_question_at_limit_and_optional_example_are_sent_as_data(self):
         completion = SimpleNamespace(choices=[SimpleNamespace(finish_reason="stop", message=SimpleNamespace(content=json.dumps({"lines": ["Yes, if the form asks for your full legal name."]})))])
         payload = {**self.valid, "question": "q" * 300, "example": "Alex Smith"}
-        with patch.dict("app.os.environ", {"OPENAI_API_KEY": "fictional-key"}, clear=True), patch("app.OpenAI") as client:
+        with patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "fictional-key"}, clear=True), patch("ai_client.OpenAI") as client:
             client.return_value.chat.completions.create.return_value = completion
             response = self.post(payload)
         self.assertEqual(response.status_code, 200)
@@ -471,7 +472,7 @@ class AskValidationTests(unittest.TestCase):
         self.assertEqual(sent, {"label": "Fictional name", "guidance": "Enter your full name", "question": "q" * 300, "example": "Alex Smith"})
 
     def test_old_explain_route_is_removed(self):
-        with patch("app.OpenAI") as client:
+        with patch("ai_client.OpenAI") as client:
             response = app.test_client().post("/api/explain", json={"label": "Name", "guidance": "Enter your name"})
         self.assertIn(response.status_code, (404, 405))
         client.assert_not_called()

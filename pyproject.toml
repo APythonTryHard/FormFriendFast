@@ -10,4 +10,5 @@ dependencies = [
     "pillow-heif>=1.0,<2",
     "pypdf>=6,<7",
     "pypdfium2>=4.30,<6",
+    "anthropic>=0.125,<1",
 ]

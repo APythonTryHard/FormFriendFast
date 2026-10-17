@@ -27,26 +27,44 @@ Understand what belongs in each field on a form. Upload an image or PDF, select 
    ```sh
    gunicorn app:app
    ```
-4. Under **Environment**, add `OPENAI_API_KEY` with your OpenAI API key. Do not put the key in source code, GitHub, or a browser-side script.
+4. Under **Environment**, add `ANTHROPIC_API_KEY` with your Claude API key (or `OPENAI_API_KEY` if you use OpenAI) plus the model settings below. Do not put the key in source code, GitHub, or a browser-side script.
 5. Set **Health Check Path** to `/healthz`, then deploy.
 
-Alternatively create a Render Blueprint using the included `render.yaml`; it declares the same commands and prompts for the API key.
+Alternatively create a Render Blueprint using the included `render.yaml`; it declares the same commands, the default model settings, and prompts for the API keys. A service created manually in the dashboard does not read `render.yaml`: set the environment variables in the Render dashboard (**Environment** tab) and redeploy.
 
-`gunicorn.conf.py` automatically binds to `0.0.0.0:$PORT`, uses one worker with two threads, and allows 240 seconds for requests so the application's 180-second analysis timeout is not cut off by Gunicorn's default. Run the start command from the repository root so this configuration is loaded. Python is pinned in `.python-version`.
+`gunicorn.conf.py` automatically binds to `0.0.0.0:$PORT`, uses one worker with two threads, and allows 260 seconds for requests so the application's 200-second analysis timeout is not cut off by Gunicorn's default. Run the start command from the repository root so this configuration is loaded. Python is pinned in `.python-version`.
 
 ### Model and account access
 
-Both analysis and field questions request **`gpt-6.1-sol`**, set in `app.py`. The server calls the OpenAI API directly at `https://api.openai.com/v1`; it does not use a ChatGPT or Hermes session. Your API account must have access to that exact model ID and sufficient API credit. Model access has not been verified with a paid live request. An API rejection is shown as an error; there is no silent model fallback.
+By default both analysis and field questions use Anthropic **`claude-opus-5-5`** at **medium** effort (adaptive thinking), via the official `anthropic` SDK. The server calls the provider's API directly; it does not use a Claude, ChatGPT or Hermes session. Your API account must have access to the configured model ID and sufficient API credit. Model access has not been verified with a paid live request. An API rejection is shown as an error; there is no silent model fallback.
+
+### Choosing the AI model
+
+Settings are read from environment variables (on Render: dashboard → **Environment**, then redeploy). No code change is needed to switch.
+
+| Variable | Values | Default |
+| --- | --- | --- |
+| `AI_PROVIDER` | `anthropic`, `openai` | `anthropic` |
+| `AI_MODEL` | model ID for that provider | `claude-opus-5-5` (anthropic), `gpt-6.1-sol` (openai) |
+| `AI_REASONING` | `low`, `medium`, `high` | `medium` |
+| `ANTHROPIC_API_KEY` | Claude API key | — (or `~/.config/formfriend/anthropic-key`, chmod 600) |
+| `OPENAI_API_KEY` | OpenAI API key | — (or `~/.config/formfriend/openai-key`, chmod 600) |
+
+For Anthropic, `AI_REASONING` sets the effort level with adaptive thinking; for OpenAI it sets `reasoning_effort`. An invalid provider or reasoning value makes analysis and questions return a configuration error (HTTP 503) instead of calling a model.
+
+Switch back to the previous OpenAI setup: `AI_PROVIDER=openai`, `AI_MODEL=gpt-6.1-sol`, `AI_REASONING=low` (with `OPENAI_API_KEY` set).
+
+Per-task overrides take precedence over the global values: `ANALYZE_PROVIDER`, `ANALYZE_MODEL`, `ANALYZE_REASONING` for form analysis and `ASK_PROVIDER`, `ASK_MODEL`, `ASK_REASONING` for field questions. For example, `ASK_REASONING=low` keeps analysis at medium but answers questions faster. If a task overrides the provider without its own model, that provider's default model is used (the global `AI_MODEL` only applies to `AI_PROVIDER`). The page's privacy text names the provider each feature uses.
 
 ### Hosting and cost caveats
 
-Render's Free service can spin down after 15 minutes without inbound traffic, so the first visit afterward can take about a minute to wake it. Free services are intended for hobby/testing use, not production guarantees. OpenAI requests are separate from Render hosting and may incur API charges.
+Render's Free service can spin down after 15 minutes without inbound traffic, so the first visit afterward can take about a minute to wake it. Free services are intended for hobby/testing use, not production guarantees. AI provider requests are separate from Render hosting and may incur API charges.
 
 **This app currently has no user authentication or rate limiting. Anyone with the deployed URL can submit requests billed to your server's API key.** Use it as a limited demo only; add authentication, abuse controls, and spending monitoring before promoting it publicly. A private GitHub repository does not make a deployed web service private.
 
 ## Privacy and limitations
 
-- Images and selected PDF pages are sent to OpenAI for analysis. Asking about a field sends your question, the field's label, guidance and example, and the hidden form summary (which describes the blank form and is instructed not to copy filled-in information).
+- Images and selected PDF pages are sent to the configured AI provider (Anthropic by default) for analysis. Asking about a field sends your question, the field's label, guidance and example, and the hidden form summary (which describes the blank form and is instructed not to copy filled-in information).
 - The current document, previews, results, and your questions and answers are stored in IndexedDB in the user's browser. Multi-page PDFs also retain their original PDF there. Do not upload sensitive documents on shared browsers; use **Start over** or clear site data afterward.
 - Application code does not write uploaded forms to server files. Extracted content is not printed to application logs; operational status and errors are logged.
 - PDFs are rendered locally before inference. Encrypted PDFs are rejected. Animated or multi-page images use only the first frame/page.
@@ -61,7 +79,7 @@ Use Python 3.12 or newer:
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-# Set OPENAI_API_KEY in your shell environment before analysis.
+# Set ANTHROPIC_API_KEY (or AI_PROVIDER=openai and OPENAI_API_KEY) in your shell before analysis.
 python app.py
 ```
 
@@ -71,7 +89,7 @@ Visit `http://127.0.0.1:5001`. The development entry point has debug mode disabl
 PORT=8000 gunicorn app:app
 ```
 
-The app also supports a local key file at `~/.config/formfriend/openai-key` with permissions `600`. On Render use `OPENAI_API_KEY` instead. `.env.example` is a reference only; `.env` files are not loaded automatically.
+The app also supports local key files at `~/.config/formfriend/anthropic-key` and `~/.config/formfriend/openai-key` with permissions `600`. On Render use `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` instead. `.env.example` is a reference only; `.env` files are not loaded automatically.
 
 ## Tests
 
@@ -97,4 +115,5 @@ Keep all three files in sync.
 
 - [Render Flask deployment guide](https://render.com/docs/deploy-flask)
 - [Render Free service limitations](https://render.com/docs/free)
+- [Anthropic API documentation](https://docs.anthropic.com/)
 - [OpenAI API quickstart](https://developers.openai.com/api/docs/quickstart)

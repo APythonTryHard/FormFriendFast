@@ -7,8 +7,9 @@ bind = f"0.0.0.0:{os.environ.get('PORT', '8000')}"
 workers = 1
 worker_class = "gthread"
 threads = 2
-# Must exceed the application's 180-second model timeout plus conversion time.
-timeout = 240
+# Must exceed the application's 200-second analysis timeout (ANALYZE_TIMEOUT
+# in app.py) plus image/PDF conversion time.
+timeout = 260
 graceful_timeout = 30
 accesslog = "-"
 errorlog = "-"

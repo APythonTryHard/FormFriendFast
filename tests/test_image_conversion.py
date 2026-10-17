@@ -27,7 +27,7 @@ class ImageConversionTests(unittest.TestCase):
             self.assertEqual(converted.size, (80, 120))
             self.assertEqual(converted.format, "JPEG")
         completion = SimpleNamespace(choices=[SimpleNamespace(finish_reason="stop", message=SimpleNamespace(content='{"fields":[]}'))])
-        with patch("app.load_api_key", return_value=("fictional-key", None)), patch("app.OpenAI") as client, redirect_stdout(io.StringIO()):
+        with patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "fictional-key"}), patch("ai_client.OpenAI") as client, redirect_stdout(io.StringIO()):
             client.return_value.chat.completions.create.return_value = completion
             analyzed = self.upload(source.getvalue(), route="/api/analyze")
         self.assertEqual(analyzed.status_code, 200)
@@ -79,7 +79,7 @@ class ImageConversionTests(unittest.TestCase):
     def test_unconvertible_data_is_rejected_before_inference(self):
         for data in (b"", b"not an image", b"%PDF-1.7", b'<svg xmlns="http://www.w3.org/2000/svg"></svg>'):
             for route in ("/api/convert", "/api/analyze"):
-                with self.subTest(data=data, route=route), patch("app.OpenAI") as provider:
+                with self.subTest(data=data, route=route), patch("ai_client.OpenAI") as provider:
                     response = self.upload(data, "bad.png", route)
                     self.assertEqual(response.status_code, 400)
                     self.assertIn("error", response.json)

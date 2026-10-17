@@ -7,6 +7,15 @@ services:
     startCommand: gunicorn app:app
     healthCheckPath: /healthz
     envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: AI_PROVIDER
+        value: anthropic
+      - key: AI_MODEL
+        value: claude-opus-5-5
+      - key: AI_REASONING
+        value: medium
+      # Kept so AI_PROVIDER=openai can be switched back without a code change.
       - key: OPENAI_API_KEY
         sync: false
       - key: PYTHONUNBUFFERED

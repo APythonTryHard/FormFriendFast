@@ -19,7 +19,7 @@ class FormContextTests(unittest.TestCase):
         Image.new("RGB", (80, 100), "white").save(image, format="PNG")
         image.seek(0)
         completion = SimpleNamespace(choices=[SimpleNamespace(finish_reason="stop", message=SimpleNamespace(content=raw))])
-        with patch.dict("app.os.environ", {"OPENAI_API_KEY": "fictional-test-key"}, clear=True), patch("app.OpenAI") as client, redirect_stdout(io.StringIO()):
+        with patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "fictional-test-key"}, clear=True), patch("ai_client.OpenAI") as client, redirect_stdout(io.StringIO()):
             client.return_value.chat.completions.create.return_value = completion
             response = app.test_client().post("/api/analyze", data={"image": (image, "fictional.png"), "language": language})
         self.create = client.return_value.chat.completions.create

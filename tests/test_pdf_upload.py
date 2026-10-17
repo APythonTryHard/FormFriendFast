@@ -75,7 +75,7 @@ class PdfUploadTests(unittest.TestCase):
         from types import SimpleNamespace
         from unittest.mock import patch
         completion = SimpleNamespace(choices=[SimpleNamespace(finish_reason="stop", message=SimpleNamespace(content='{"fields":[]}'))])
-        with patch("app.load_api_key", return_value=("fictional-key", None)), patch("app.OpenAI") as client, redirect_stdout(io.StringIO()):
+        with patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "fictional-key"}), patch("ai_client.OpenAI") as client, redirect_stdout(io.StringIO()):
             client.return_value.chat.completions.create.return_value = completion
             response = app.test_client().post("/api/analyze", data={"image": (io.BytesIO(pdf_bytes()), "form.pdf"), "page": "1"})
         self.assertEqual(response.status_code, 200)

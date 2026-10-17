@@ -29,14 +29,14 @@
                 <div class="workspace-header"><h2>Form</h2><div class="workspace-actions"><label id="page-control" hidden>Page <select id="page-select" aria-label="PDF page"></select></label><button id="reset-button" class="text-button" type="button" hidden>↻ &nbsp; Start over</button></div></div>
                 <p id="storage-notice" class="guidance-note storage-disclosure" role="status" hidden></p>
                 <div id="empty-state" class="empty-state">
-                    <label id="drop-zone" class="drop-zone" for="image-input" role="button" tabindex="0" aria-labelledby="drop-zone-title" aria-describedby="drop-zone-limits drop-zone-privacy drop-zone-storage drop-zone-pages"><input id="image-input" type="file" accept="application/pdf,.pdf,image/*,.heic,.heif,.avif,.bmp,.tif,.tiff,.gif,.ico,.jp2,.jxl,.psd,.tga,.ppm,.pgm,.pbm,.qoi" hidden><span class="upload-icon" aria-hidden="true">⇧</span><strong id="drop-zone-title">Choose an image or PDF</strong><span class="drop-hint">or drop it here</span><small id="drop-zone-limits">Images or PDF · Max 8 MB · PDFs up to 20 pages</small><small id="drop-zone-privacy">Images and selected PDF pages are sent to OpenAI for analysis.</small><small id="drop-zone-storage">Your current document is saved in this browser. Start over deletes it.</small><small id="drop-zone-pages">Animated or multi-page images use the first frame/page; PDFs have a page selector.</small></label>
+                    <label id="drop-zone" class="drop-zone" for="image-input" role="button" tabindex="0" aria-labelledby="drop-zone-title" aria-describedby="drop-zone-limits drop-zone-privacy drop-zone-storage drop-zone-pages"><input id="image-input" type="file" accept="application/pdf,.pdf,image/*,.heic,.heif,.avif,.bmp,.tif,.tiff,.gif,.ico,.jp2,.jxl,.psd,.tga,.ppm,.pgm,.pbm,.qoi" hidden><span class="upload-icon" aria-hidden="true">⇧</span><strong id="drop-zone-title">Choose an image or PDF</strong><span class="drop-hint">or drop it here</span><small id="drop-zone-limits">Images or PDF · Max 8 MB · PDFs up to 20 pages</small><small id="drop-zone-privacy">Images and selected PDF pages are sent to {{ analyze_provider }} for analysis.</small><small id="drop-zone-storage">Your current document is saved in this browser. Start over deletes it.</small><small id="drop-zone-pages">Animated or multi-page images use the first frame/page; PDFs have a page selector.</small></label>
                     <input id="photo-input" type="file" accept="image/*" hidden>
                 </div>
                 <div id="loading-state" class="loading-state" role="status" aria-live="polite" hidden>
                     <div class="loading-spinner" aria-hidden="true"></div>
                     <h3 id="loading-title">Analyzing form…</h3>
                     <p><strong id="loading-filename"></strong></p>
-                    <div class="progress-track" role="progressbar" aria-label="Analyzing form" aria-valuetext="Analyzing with OpenAI"><div class="progress-motion"></div></div>
+                    <div class="progress-track" role="progressbar" aria-label="Analyzing form" aria-valuetext="Analyzing with {{ analyze_provider }}"><div class="progress-motion"></div></div>
                 </div>
                 <div id="result-state" class="result-state" hidden>
                     <div class="preview-panel"><div class="panel-heading"><h3 id="filename">Form image</h3></div><div class="image-stage"><div id="image-wrap" class="image-wrap"><img id="form-preview" alt="Uploaded form preview"><div id="box-layer" class="box-layer"></div></div></div></div>
@@ -46,7 +46,7 @@
                         <section id="ask-panel" class="ask-panel" aria-label="Ask about the selected field" hidden>
                             <strong id="ask-label" class="ask-label"></strong>
                             <form id="ask-form" class="ask-form" novalidate><input id="ask-input" class="ask-input" type="text" name="question" maxlength="300" autocomplete="off" enterkeyhint="send" dir="auto" placeholder="Ask about this field…" aria-label="Question about this field"><button id="ask-button" class="ask-button" type="submit" disabled>Ask</button></form>
-                            <p class="ask-disclosure">Sends your question, this field, and a summary of the form to OpenAI.</p>
+                            <p class="ask-disclosure">Sends your question, this field, and a summary of the form to {{ ask_provider }}.</p>
                             <p id="answer" class="answer" aria-live="polite" hidden></p>
                             <p id="ask-error" class="ask-error" role="alert" hidden></p>
                         </section>

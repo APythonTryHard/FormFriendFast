@@ -20,7 +20,7 @@ def completion(result, finish_reason="stop"):
 class AskTests(unittest.TestCase):
     def test_ask_returns_one_to_five_lines_with_low_reasoning(self):
         lines = ["Use the amount from Form W-2 box 1.", "Check the issuer's instructions if unsure."]
-        with patch.dict("app.os.environ", {"OPENAI_API_KEY": "fictional-key"}, clear=True), patch("app.OpenAI") as client:
+        with patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "fictional-key"}, clear=True), patch("ai_client.OpenAI") as client:
             client.return_value.chat.completions.create.return_value = completion({"lines": lines})
             response = app.test_client().post("/api/ask", json={"label": "Income line 1a", "guidance": "Enter total wages from Form W-2 box 1.", "question": "Which box do I use?"})
         self.assertEqual(response.status_code, 200)
@@ -38,7 +38,7 @@ class AskTests(unittest.TestCase):
         self.assertNotIn("image_url", json.dumps(payload))
 
     def test_single_line_off_topic_style_answer_is_valid(self):
-        with patch.dict("app.os.environ", {"OPENAI_API_KEY": "fictional-key"}, clear=True), patch("app.OpenAI") as client:
+        with patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "fictional-key"}, clear=True), patch("ai_client.OpenAI") as client:
             client.return_value.chat.completions.create.return_value = completion({"lines": ["I can only help with this form field."]})
             response = app.test_client().post("/api/ask", json={**FIELD, "question": "What's the weather?"})
         self.assertEqual(response.status_code, 200)
@@ -47,7 +47,7 @@ class AskTests(unittest.TestCase):
     def test_rejects_invalid_field_or_question_before_calling_provider(self):
         for payload in (None, [], {}, {"label": "Name", "guidance": "", "question": "Why?"}, {"label": "x" * 1001, "guidance": "Enter value", "question": "Why?"},
                         {"label": "Name", "guidance": "Enter value"}, {**FIELD, "question": "  "}, {**FIELD, "question": "x" * 301}):
-            with self.subTest(payload=payload), patch("app.OpenAI") as client:
+            with self.subTest(payload=payload), patch("ai_client.OpenAI") as client:
                 response = app.test_client().post("/api/ask", json=payload)
             self.assertEqual(response.status_code, 400)
             client.assert_not_called()
@@ -57,7 +57,7 @@ class AskTests(unittest.TestCase):
                  ("stop", {"lines": ["One", "Two", "Three", "Four", "Five", "Six"]}),
                  ("stop", {"lines": ["One\nMore"]}), ("stop", {"lines": ["x" * 301]}), ("stop", {"answer": "One"})]
         for finish_reason, result in cases:
-            with self.subTest(result=result), patch.dict("app.os.environ", {"OPENAI_API_KEY": "fictional-key"}, clear=True), patch("app.OpenAI") as client:
+            with self.subTest(result=result), patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "fictional-key"}, clear=True), patch("ai_client.OpenAI") as client:
                 client.return_value.chat.completions.create.return_value = completion(result, finish_reason)
                 response = app.test_client().post("/api/ask", json=FIELD)
             self.assertEqual(response.status_code, 502)
@@ -66,7 +66,7 @@ class AskTests(unittest.TestCase):
 
     def test_five_line_answer_is_accepted(self):
         lines = [f"Line {n}" for n in range(1, 6)]
-        with patch.dict("app.os.environ", {"OPENAI_API_KEY": "fictional-key"}, clear=True), patch("app.OpenAI") as client:
+        with patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "fictional-key"}, clear=True), patch("ai_client.OpenAI") as client:
             client.return_value.chat.completions.create.return_value = completion({"lines": lines})
             response = app.test_client().post("/api/ask", json=FIELD)
         self.assertEqual(response.status_code, 200)
@@ -74,7 +74,7 @@ class AskTests(unittest.TestCase):
 
     def test_form_context_is_passed_in_user_message(self):
         context = "Fictional county library card application. Applicants must live in the county."
-        with patch.dict("app.os.environ", {"OPENAI_API_KEY": "fictional-key"}, clear=True), patch("app.OpenAI") as client:
+        with patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "fictional-key"}, clear=True), patch("ai_client.OpenAI") as client:
             client.return_value.chat.completions.create.return_value = completion({"lines": ["One"]})
             response = app.test_client().post("/api/ask", json={**FIELD, "context": f"  {context}  "})
         self.assertEqual(response.status_code, 200)
@@ -85,7 +85,7 @@ class AskTests(unittest.TestCase):
 
     def test_form_context_is_optional_and_blank_is_omitted(self):
         for extra in ({}, {"context": ""}, {"context": "   "}, {"context": None}):
-            with self.subTest(extra=extra), patch.dict("app.os.environ", {"OPENAI_API_KEY": "fictional-key"}, clear=True), patch("app.OpenAI") as client:
+            with self.subTest(extra=extra), patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "fictional-key"}, clear=True), patch("ai_client.OpenAI") as client:
                 client.return_value.chat.completions.create.return_value = completion({"lines": ["One"]})
                 response = app.test_client().post("/api/ask", json={**FIELD, **extra})
             self.assertEqual(response.status_code, 200)
@@ -93,20 +93,20 @@ class AskTests(unittest.TestCase):
             self.assertNotIn("context", user)
 
     def test_form_context_at_limit_is_accepted(self):
-        with patch.dict("app.os.environ", {"OPENAI_API_KEY": "fictional-key"}, clear=True), patch("app.OpenAI") as client:
+        with patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "fictional-key"}, clear=True), patch("ai_client.OpenAI") as client:
             client.return_value.chat.completions.create.return_value = completion({"lines": ["One"]})
             response = app.test_client().post("/api/ask", json={**FIELD, "context": "x" * 2000})
         self.assertEqual(response.status_code, 200)
 
     def test_invalid_form_context_is_rejected_before_provider(self):
         for context in ("x" * 2001, 123, ["list"], {"a": "b"}, True):
-            with self.subTest(context=type(context).__name__), patch.dict("app.os.environ", {"OPENAI_API_KEY": "fictional-key"}, clear=True), patch("app.OpenAI") as client:
+            with self.subTest(context=type(context).__name__), patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "fictional-key"}, clear=True), patch("ai_client.OpenAI") as client:
                 response = app.test_client().post("/api/ask", json={**FIELD, "context": context})
             self.assertEqual(response.status_code, 400)
             client.assert_not_called()
 
     def test_missing_key_does_not_call_provider(self):
-        with tempfile.TemporaryDirectory() as directory, patch("app.KEY_FILE", Path(directory) / "missing"), patch.dict("app.os.environ", {}, clear=True), patch("app.OpenAI") as client:
+        with tempfile.TemporaryDirectory() as directory, patch("ai_client.OPENAI_KEY_FILE", Path(directory) / "missing"), patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low"}, clear=True), patch("ai_client.OpenAI") as client:
             response = app.test_client().post("/api/ask", json=FIELD)
         self.assertEqual(response.status_code, 503)
         client.assert_not_called()
@@ -116,7 +116,7 @@ class AskTests(unittest.TestCase):
         errors = [(APITimeoutError(request=request), 504),
                   (APIStatusError("private provider details", response=httpx.Response(401, request=request), body={"error": "private"}), 502)]
         for error, status in errors:
-            with self.subTest(status=status), patch.dict("app.os.environ", {"OPENAI_API_KEY": "fictional-key"}, clear=True), patch("app.OpenAI") as client:
+            with self.subTest(status=status), patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "fictional-key"}, clear=True), patch("ai_client.OpenAI") as client:
                 client.return_value.chat.completions.create.side_effect = error
                 response = app.test_client().post("/api/ask", json=FIELD)
             self.assertEqual(response.status_code, status)
@@ -132,7 +132,7 @@ class AskTests(unittest.TestCase):
                                            "choices": [{"index": 0, "finish_reason": "stop", "message": {"role": "assistant", "content": '{"lines":["One","Two"]}'}}]})
 
         with OpenAI(api_key="fictional-key", http_client=httpx.Client(transport=httpx.MockTransport(respond))) as real_client:
-            with patch.dict("app.os.environ", {"OPENAI_API_KEY": "fictional-key"}, clear=True), patch("app.OpenAI", return_value=real_client):
+            with patch.dict("app.os.environ", {"AI_PROVIDER": "openai", "AI_REASONING": "low", "OPENAI_API_KEY": "fictional-key"}, clear=True), patch("ai_client.OpenAI", return_value=real_client):
                 response = app.test_client().post("/api/ask", json=FIELD)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(requests[0]["reasoning_effort"], "low")
