@@ -97,7 +97,7 @@ async function noOverflow(page, label) {
       await picker.setFiles(path.join(fixtures, 'packet.pdf'));
       await page.locator('#result-state').waitFor({ state: 'visible' });
       assert.equal(await page.locator('#page-select option').count(), 2);
-      for (const control of ['#page-select', '#reset-button', '#explain-button']) {
+      for (const control of ['#page-select', '#reset-button', '#ask-input', '#ask-button']) {
         const box = await page.locator(control).boundingBox();
         assert.ok(box.height >= 44 && box.x >= 0 && box.x + box.width <= width, `${width}: ${control} fits and is touch-sized`);
       }

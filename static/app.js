@@ -13,11 +13,14 @@ const preview = document.querySelector('#form-preview');
 const boxLayer = document.querySelector('#box-layer');
 const fieldsList = document.querySelector('#fields-list');
 const error = document.querySelector('#error');
-const explainPanel = document.querySelector('#explain-panel');
-const explainLabel = document.querySelector('#explain-label');
-const explainButton = document.querySelector('#explain-button');
-const explanation = document.querySelector('#explanation');
-const explainError = document.querySelector('#explain-error');
+const askPanel = document.querySelector('#ask-panel');
+const askLabel = document.querySelector('#ask-label');
+const askForm = document.querySelector('#ask-form');
+const askInput = document.querySelector('#ask-input');
+const askButton = document.querySelector('#ask-button');
+const answer = document.querySelector('#answer');
+const askError = document.querySelector('#ask-error');
+const MAX_QUESTION_CHARS = 300;
 const fieldNav = document.querySelector('#field-nav');
 const fieldPrev = document.querySelector('#field-prev');
 const fieldNext = document.querySelector('#field-next');
@@ -30,8 +33,8 @@ let controller = null;
 let generation = 0;
 let currentFields = [];
 let selectedField = null;
-let explanationController = null;
-let explanationGeneration = 0;
+let askController = null;
+let askGeneration = 0;
 let savedForm = null;
 let documentEpoch = 0;
 let renderingSaved = false;
@@ -137,7 +140,24 @@ async function selectPdfPage(index) {
   }
 }
 
+// Saved results hold the latest question/answer per field in `answers`.
+// Older saves used `explanations` (pre-question feature); drop those.
+function normalizeResult(result) {
+  if (!result || typeof result !== 'object') return result;
+  delete result.explanations;
+  if (!result.answers || typeof result.answers !== 'object' || Array.isArray(result.answers)) result.answers = {};
+  return result;
+}
+
+function savedAnswer(result, id) {
+  const entry = result?.answers?.[id];
+  if (!entry || typeof entry.question !== 'string' || !Array.isArray(entry.lines) || !entry.lines.length
+      || entry.lines.some(line => typeof line !== 'string')) return null;
+  return entry;
+}
+
 function displayCached(result) {
+  normalizeResult(result);
   renderingSaved = true;
   try {
     showFields(result.fields);
@@ -166,22 +186,35 @@ async function restoreForm() {
       return;
     }
     savedForm = record;
+    for (const result of Object.values(record.results)) normalizeResult(result);
     // Some engines deserialize File as Blob; keep the original filename explicitly.
     const file = new File([record.file], record.name, { type: record.file.type });
     analyze(file, true);
   } catch { storageWarning(); }
 }
 
-function clearExplanation() {
-  explanationGeneration++;
-  if (explanationController) explanationController.abort();
-  explanationController = null;
-  explanation.textContent = '';
-  explanation.hidden = true;
-  explainError.textContent = '';
-  explainError.hidden = true;
-  explainButton.disabled = false;
-  explainButton.textContent = 'Explain';
+function updateAskButton() {
+  askButton.disabled = Boolean(askController) || !askInput.value.trim();
+}
+
+// Abort/ignore any in-flight question and hide the answer; keeps typed text.
+function clearAnswer() {
+  askGeneration++;
+  if (askController) askController.abort();
+  askController = null;
+  answer.textContent = '';
+  answer.hidden = true;
+  askError.textContent = '';
+  askError.hidden = true;
+  askButton.textContent = 'Ask';
+  askButton.removeAttribute('aria-busy');
+  updateAskButton();
+}
+
+function resetQuestion() {
+  clearAnswer();
+  askInput.value = '';
+  updateAskButton();
 }
 
 function clear(keepSaved = false) {
@@ -191,11 +224,11 @@ function clear(keepSaved = false) {
     storeForm();
   }
   currentFile = null;
-  clearExplanation();
+  resetQuestion();
   currentFields = [];
   selectedField = null;
-  explainPanel.hidden = true;
-  explainLabel.textContent = '';
+  askPanel.hidden = true;
+  askLabel.textContent = '';
   generation++;
   if (controller) controller.abort();
   controller = null;
@@ -225,10 +258,11 @@ function showError(message) {
 function selectField(id) {
   const field = currentFields.find(field => field.id === id);
   if (!field) return;
-  if (selectedField !== field) clearExplanation();
+  const changed = selectedField !== field;
+  if (changed) resetQuestion();
   selectedField = field;
-  explainPanel.hidden = false;
-  explainLabel.textContent = `${currentFields.indexOf(field) + 1}. ${field.label}`;
+  askPanel.hidden = false;
+  askLabel.textContent = `${currentFields.indexOf(field) + 1}. ${field.label}`;
   for (const element of document.querySelectorAll('[data-field-id]')) {
     element.classList.toggle('selected', Number(element.dataset.fieldId) === id);
   }
@@ -238,10 +272,12 @@ function selectField(id) {
   if (!phoneLayout?.matches) card?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   updateFieldNav();
   const cached = cachedResult();
-  const lines = cached?.explanations[id];
-  if (lines) {
-    explanation.textContent = lines.join('\n');
-    explanation.hidden = false;
+  const saved = changed ? savedAnswer(cached, id) : null;
+  if (saved) {
+    askInput.value = saved.question;
+    answer.textContent = saved.lines.join('\n');
+    answer.hidden = false;
+    updateAskButton();
   }
   if (cached && !renderingSaved) {
     cached.selected = id;
@@ -267,14 +303,14 @@ function stepField(offset) {
 function showFields(fields) {
   const language = languageSelect.value;
   const direction = ['ar', 'he', 'fa', 'ur', 'ps'].includes(language) ? 'rtl' : 'ltr';
-  for (const element of [fieldsList, explainLabel, explanation]) {
+  for (const element of [fieldsList, askLabel, answer]) {
     element.lang = language;
     element.dir = direction;
   }
-  clearExplanation();
+  resetQuestion();
   currentFields = fields;
   selectedField = null;
-  explainPanel.hidden = true;
+  askPanel.hidden = true;
   document.querySelector('#field-count').textContent = fields.length;
   boxLayer.replaceChildren();
   fieldsList.replaceChildren();
@@ -334,42 +370,57 @@ function showFields(fields) {
   if (fields.length) selectField(fields[0].id);
 }
 
-async function explainSelectedField() {
-  if (!selectedField || explanationController) return;
+async function askSelectedField(event) {
+  event?.preventDefault?.();
+  if (!selectedField || askController) return;
+  const question = askInput.value.trim();
+  if (!question || question.length > MAX_QUESTION_CHARS) return;
   const cached = cachedResult();
-  if (cached?.explanations[selectedField.id]) {
-    explanation.textContent = cached.explanations[selectedField.id].join('\n');
-    explanation.hidden = false;
+  const saved = savedAnswer(cached, selectedField.id);
+  if (saved && saved.question === question) {
+    answer.textContent = saved.lines.join('\n');
+    answer.hidden = false;
+    askError.hidden = true;
     return;
   }
-  clearExplanation();
-  const current = explanationGeneration;
+  clearAnswer();
+  const current = askGeneration;
   const field = selectedField;
-  explanationController = new AbortController();
-  explainButton.disabled = true;
-  explainButton.textContent = 'Explaining…';
+  const payload = { label: field.label, guidance: field.guidance, question, language: languageSelect.value };
+  const example = typeof field.example === 'string' ? field.example.trim() : '';
+  if (example && example.length <= 60) payload.example = example;
+  askController = new AbortController();
+  askButton.textContent = 'Asking…';
+  askButton.setAttribute('aria-busy', 'true');
+  updateAskButton();
   try {
-    const response = await fetch('/api/explain', {
+    const response = await fetch('/api/ask', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ label: field.label, guidance: field.guidance, language: languageSelect.value }),
-      signal: explanationController.signal,
+      body: JSON.stringify(payload),
+      signal: askController.signal,
     });
     const result = await response.json();
-    if (current !== explanationGeneration) return;
-    if (!response.ok) throw new Error(result.error || 'Could not explain this field.');
-    explanation.textContent = result.lines.join('\n');
-    explanation.hidden = false;
-    if (cached) { cached.explanations[field.id] = result.lines; storeForm(); }
+    if (current !== askGeneration) return;
+    if (!response.ok) throw new Error(result.error || 'Could not answer this question.');
+    if (!Array.isArray(result.lines) || result.lines.some(line => typeof line !== 'string')) throw new Error('Could not answer this question.');
+    answer.textContent = result.lines.join('\n');
+    answer.hidden = false;
+    if (cached) {
+      normalizeResult(cached);
+      cached.answers[field.id] = { question, lines: result.lines };
+      storeForm();
+    }
   } catch (err) {
-    if (current !== explanationGeneration || err.name === 'AbortError') return;
-    explainError.textContent = err.message || 'Could not explain this field.';
-    explainError.hidden = false;
+    if (current !== askGeneration || err.name === 'AbortError') return;
+    askError.textContent = err.message || 'Could not answer this question.';
+    askError.hidden = false;
   } finally {
-    if (current === explanationGeneration) {
-      explanationController = null;
-      explainButton.disabled = false;
-      explainButton.textContent = 'Explain';
+    if (current === askGeneration) {
+      askController = null;
+      askButton.textContent = 'Ask';
+      askButton.removeAttribute('aria-busy');
+      updateAskButton();
     }
   }
 }
@@ -447,7 +498,7 @@ async function analyze(file, sameDocument = false) {
     const result = await response.json();
     if (current !== generation) return;
     if (!response.ok) throw new Error(result.error || 'Could not analyze this image.');
-    const cached = { fields: result.fields, selected: result.fields[0]?.id ?? null, explanations: {} };
+    const cached = { fields: result.fields, selected: result.fields[0]?.id ?? null, answers: {} };
     savedForm.results[key] = cached;
     displayCached(cached);
     storeForm();
@@ -485,7 +536,8 @@ languageSelect.addEventListener('change', () => {
 pageSelect.addEventListener('change', () => selectPdfPage(Number(pageSelect.value)));
 input.addEventListener('change', () => uploadImage(input.files[0]));
 photoInput?.addEventListener('change', () => uploadImage(photoInput.files[0]));
-explainButton.addEventListener('click', explainSelectedField);
+askForm.addEventListener('submit', askSelectedField);
+askInput.addEventListener('input', updateAskButton);
 fieldPrev?.addEventListener('click', () => stepField(-1));
 fieldNext?.addEventListener('click', () => stepField(1));
 resetButton.addEventListener('click', () => clear());

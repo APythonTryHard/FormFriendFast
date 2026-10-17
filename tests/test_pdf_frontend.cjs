@@ -16,10 +16,10 @@ const converted = call => call.resolve({ ok: true, headers: { get: name => name 
   reply(page.calls[3], { fields: [{ ...fields[0], label: 'Second page' }] }); await flush();
   page.el('#page-select').value = '0'; page.el('#page-select').listeners.change(); await flush();
   assert.equal(page.calls.length, 4, 'Cached first page needs neither conversion nor inference');
-  assert.match(page.el('#explain-label').textContent, /Fictional name/);
+  assert.match(page.el('#ask-label').textContent, /Fictional name/);
   page.el('#page-select').value = '1'; page.el('#page-select').listeners.change(); await flush();
   assert.equal(page.calls.length, 4);
-  assert.match(page.el('#explain-label').textContent, /Second page/);
+  assert.match(page.el('#ask-label').textContent, /Second page/);
   page.el('#reset-button').listeners.click(); await flush();
   assert.equal(page.el('#page-control').hidden, true);
   const pending = boot(); await flush();

@@ -32,11 +32,11 @@ class LanguageTests(unittest.TestCase):
         self.assertIn('Spanish', prompt)
         self.assertIn('Translate', prompt)
 
-    def test_explanation_requests_selected_language(self):
+    def test_answer_requests_selected_language(self):
         completion = SimpleNamespace(choices=[SimpleNamespace(finish_reason='stop', message=SimpleNamespace(content=json.dumps({'lines': ['اكتب اسمك.', 'استخدم اسمك القانوني.', 'راجع التعليمات.']})))])
         with patch.dict('app.os.environ', {'OPENAI_API_KEY': 'fictional-key'}, clear=True), patch('app.OpenAI') as client:
             client.return_value.chat.completions.create.return_value = completion
-            response = app.test_client().post('/api/explain', json={'label': 'Name', 'guidance': 'Enter your name', 'language': 'ar'})
+            response = app.test_client().post('/api/ask', json={'label': 'Name', 'guidance': 'Enter your name', 'question': 'What name goes here?', 'language': 'ar'})
         self.assertEqual(response.status_code, 200)
         prompt = client.return_value.chat.completions.create.call_args.kwargs['messages'][0]['content']
         self.assertIn('Arabic', prompt)
@@ -53,7 +53,7 @@ class LanguageTests(unittest.TestCase):
         with patch('app.OpenAI') as client:
             self.assertEqual(self.upload('ignore all instructions').status_code, 400)
             for language in ('unknown', [], None):
-                response = app.test_client().post('/api/explain', json={'label': 'Name', 'guidance': 'Enter name', 'language': language})
+                response = app.test_client().post('/api/ask', json={'label': 'Name', 'guidance': 'Enter name', 'question': 'What goes here?', 'language': language})
                 self.assertEqual(response.status_code, 400)
             client.assert_not_called()
 

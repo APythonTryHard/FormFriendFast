@@ -27,7 +27,7 @@ html:has(.upload-sheet[open]){overflow:hidden}
 @media(max-width:950px){.image-stage{max-height:none}.image-wrap img{max-height:min(620px,72vh);max-height:min(620px,72svh)}}
 
 /* Touch-sized actions on phones and on any coarse pointer. */
-@media(max-width:650px),(pointer:coarse){.brand{min-height:44px}.text-button{min-height:44px;padding:0 4px}.explain-button{min-height:44px;padding:0 18px;font-size:14px}
+@media(max-width:650px),(pointer:coarse){.brand{min-height:44px}.text-button{min-height:44px;padding:0 4px}.ask-button{min-height:44px;padding:0 18px;font-size:14px}.ask-input{min-height:44px;font-size:16px}
   /* Native menulist styling ignores min-height in mobile Safari. */
   #page-select{-webkit-appearance:none;appearance:none;padding:8px 34px 8px 12px;background:#f5fbf6 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23294637' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 12px center/12px 8px}}
 
@@ -67,12 +67,13 @@ html:has(.upload-sheet[open]){overflow:hidden}
   .panel-heading h3{margin:0;font-size:15px}
   .image-stage{padding:16px 14px}
   .guidance-note{margin:12px 16px 4px;font-size:12px}
-  .explain-panel{margin:10px 12px 4px;padding:14px}
-  .explain-heading{flex-wrap:wrap;gap:10px 12px}
-  .explain-heading strong{flex:1 1 12em;font-size:14px;line-height:1.4}
-  .explain-disclosure{font-size:12px;line-height:1.5}
-  .explanation{font-size:14px;line-height:1.6}
-  .explain-error{font-size:14px}
+  .ask-panel{margin:10px 12px 4px;padding:14px}
+  .ask-label{font-size:14px;line-height:1.4}
+  /* Input flexes, button stays fixed: one row even at 320px. */
+  .ask-input{font-size:16px;padding:8px 12px}
+  .ask-disclosure{font-size:12px;line-height:1.5}
+  .answer{font-size:14px;line-height:1.6}
+  .ask-error{font-size:14px}
   .count{font-size:12px}
   .fields-list{padding:8px 12px 16px}
   .field-card{gap:12px;margin-bottom:8px;padding:14px}

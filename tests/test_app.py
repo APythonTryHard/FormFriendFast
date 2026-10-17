@@ -217,20 +217,20 @@ class AnalyzeTests(unittest.TestCase):
         self.assertEqual(response.status_code, 502)
         self.assertIn("Fields must be an array, got dict", output.getvalue())
 
-    def test_long_label_in_field_80_is_preserved_and_can_be_explained(self):
+    def test_long_label_in_field_80_is_preserved_and_can_be_asked_about(self):
         label = "Printed instructions for this field. " * 8
         fields = [{"label": f"Field {number}", "guidance": "Enter the requested value", "box": [10, 20, 100, 40]} for number in range(79)]
         fields.append({"label": label, "guidance": "Check the printed instructions", "box": [10, 20, 100, 40]})
         lines = ["Use the information requested by this field.", "Consult the source document named on the form.", "Check official instructions if unsure."]
-        explanation = SimpleNamespace(choices=[SimpleNamespace(finish_reason="stop", message=SimpleNamespace(content=json.dumps({"lines": lines})))])
+        answer = SimpleNamespace(choices=[SimpleNamespace(finish_reason="stop", message=SimpleNamespace(content=json.dumps({"lines": lines})))])
         with patch.dict("app.os.environ", {"OPENAI_API_KEY": "fictional-key"}, clear=True), patch("app.OpenAI") as client, redirect_stdout(io.StringIO()):
-            client.return_value.chat.completions.create.side_effect = [FakeResponse(fields), explanation]
+            client.return_value.chat.completions.create.side_effect = [FakeResponse(fields), answer]
             response = self.upload()
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.json["fields"][79]["label"], label.strip())
-            explained = self.client.post("/api/explain", json={"label": response.json["fields"][79]["label"], "guidance": "Check the printed instructions"})
-        self.assertEqual(explained.status_code, 200)
-        self.assertEqual(explained.json["lines"], lines)
+            answered = self.client.post("/api/ask", json={"label": response.json["fields"][79]["label"], "guidance": "Check the printed instructions", "question": "Where do I find this?"})
+        self.assertEqual(answered.status_code, 200)
+        self.assertEqual(answered.json["lines"], lines)
 
     def test_invalid_field_reports_index_and_specific_reason_without_raw_text(self):
         cases = [
@@ -429,6 +429,52 @@ class AnalyzeTests(unittest.TestCase):
         self.assertIn(b"FormFriend", response.data)
         self.assertIn(b"Images and selected PDF pages are sent to OpenAI", response.data)
 
+
+
+class AskValidationTests(unittest.TestCase):
+    valid = {"label": "Fictional name", "guidance": "Enter your full name", "question": "Should I include my middle name?"}
+
+    def post(self, payload):
+        return app.test_client().post("/api/ask", json=payload)
+
+    def test_question_cases_rejected_before_provider_call(self):
+        cases = [
+            {k: v for k, v in self.valid.items() if k != "question"},
+            {**self.valid, "question": ""},
+            {**self.valid, "question": "   \n\t "},
+            {**self.valid, "question": None},
+            {**self.valid, "question": 42},
+            {**self.valid, "question": ["Why?"]},
+            {**self.valid, "question": "x" * 301},
+            {**self.valid, "example": "x" * 61},
+            {**self.valid, "example": 5},
+            {**self.valid, "language": "xx"},
+            {**self.valid, "label": ""},
+            {**self.valid, "guidance": "x" * 601},
+        ]
+        for payload in cases:
+            with self.subTest(payload={k: (v[:20] if isinstance(v, str) else v) for k, v in payload.items()}), \
+                    patch.dict("app.os.environ", {"OPENAI_API_KEY": "fictional-key"}, clear=True), patch("app.OpenAI") as client:
+                response = self.post(payload)
+            self.assertEqual(response.status_code, 400)
+            self.assertIn("error", response.json)
+            client.assert_not_called()
+
+    def test_question_at_limit_and_optional_example_are_sent_as_data(self):
+        completion = SimpleNamespace(choices=[SimpleNamespace(finish_reason="stop", message=SimpleNamespace(content=json.dumps({"lines": ["Yes, if the form asks for your full legal name."]})))])
+        payload = {**self.valid, "question": "q" * 300, "example": "Alex Smith"}
+        with patch.dict("app.os.environ", {"OPENAI_API_KEY": "fictional-key"}, clear=True), patch("app.OpenAI") as client:
+            client.return_value.chat.completions.create.return_value = completion
+            response = self.post(payload)
+        self.assertEqual(response.status_code, 200)
+        sent = json.loads(client.return_value.chat.completions.create.call_args.kwargs["messages"][1]["content"])
+        self.assertEqual(sent, {"label": "Fictional name", "guidance": "Enter your full name", "question": "q" * 300, "example": "Alex Smith"})
+
+    def test_old_explain_route_is_removed(self):
+        with patch("app.OpenAI") as client:
+            response = app.test_client().post("/api/explain", json={"label": "Name", "guidance": "Enter your name"})
+        self.assertIn(response.status_code, (404, 405))
+        client.assert_not_called()
 
 if __name__ == "__main__":
     unittest.main()

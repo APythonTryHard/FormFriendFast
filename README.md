@@ -1,6 +1,6 @@
 # FormFriendFast
 
-Understand what belongs in each field on a form. Upload an image or PDF, select a language, and click a highlighted field for guidance or a longer explanation.
+Understand what belongs in each field on a form. Upload an image or PDF, select a language, and click a highlighted field for guidance or ask a question about it.
 
 ## Features
 
@@ -9,7 +9,8 @@ Understand what belongs in each field on a form. Upload an image or PDF, select 
 - PDFs up to 20 pages, with page selection and local rendering.
 - Field overlays and plain-language guidance in 74 selectable languages, with a short fictional example entry where a safe one exists (the model is told to omit examples for IDs, payment, medical, and attestation fields; SSN- and card-shaped values are dropped server-side).
 - On phones, the Fields panel shows one field at a time with previous/next controls; tapping a highlighted box jumps to it.
-- Per-page/per-language result and explanation caching in the browser.
+- Ask a question about the selected field (desktop and mobile); the latest answer per field is saved.
+- Per-page/per-language result and answer caching in the browser.
 - The current document survives reloads; **Start over** clears its saved browser record.
 
 ## Deploy on Render (Free)
@@ -35,7 +36,7 @@ Alternatively create a Render Blueprint using the included `render.yaml`; it dec
 
 ### Model and account access
 
-Both analysis and explanations request **`gpt-6.1-sol`**, set in `app.py`. The server calls the OpenAI API directly at `https://api.openai.com/v1`; it does not use a ChatGPT or Hermes session. Your API account must have access to that exact model ID and sufficient API credit. Model access has not been verified with a paid live request. An API rejection is shown as an error; there is no silent model fallback.
+Both analysis and field questions request **`gpt-6.1-sol`**, set in `app.py`. The server calls the OpenAI API directly at `https://api.openai.com/v1`; it does not use a ChatGPT or Hermes session. Your API account must have access to that exact model ID and sufficient API credit. Model access has not been verified with a paid live request. An API rejection is shown as an error; there is no silent model fallback.
 
 ### Hosting and cost caveats
 
@@ -45,12 +46,12 @@ Render's Free service can spin down after 15 minutes without inbound traffic, so
 
 ## Privacy and limitations
 
-- Images and selected PDF pages are sent to OpenAI for analysis. Explaining a field sends its label and guidance.
-- The current document, previews, results, and explanations are stored in IndexedDB in the user's browser. Multi-page PDFs also retain their original PDF there. Do not upload sensitive documents on shared browsers; use **Start over** or clear site data afterward.
+- Images and selected PDF pages are sent to OpenAI for analysis. Asking about a field sends your question and the field's label, guidance and example.
+- The current document, previews, results, and your questions and answers are stored in IndexedDB in the user's browser. Multi-page PDFs also retain their original PDF there. Do not upload sensitive documents on shared browsers; use **Start over** or clear site data afterward.
 - Application code does not write uploaded forms to server files. Extracted content is not printed to application logs; operational status and errors are logged.
 - PDFs are rendered locally before inference. Encrypted PDFs are rejected. Animated or multi-page images use only the first frame/page.
 - AI guidance can be incorrect. Check the original form and official instructions. This is not personalized legal, tax, medical, or financial advice.
-- The app explains fields; it does not fill forms or export completed documents.
+- The app explains fields and answers questions about them; it does not fill forms or export completed documents.
 
 ## Local development
 

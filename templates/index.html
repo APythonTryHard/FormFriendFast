@@ -43,11 +43,12 @@
                     <div class="fields-panel">
                         <div class="panel-heading"><h3>Fields <span id="field-count" class="count">0</span></h3><nav id="field-nav" class="field-nav" aria-label="Field navigation" hidden><button id="field-prev" class="field-nav-button" type="button" aria-label="Previous field">‹</button><span id="field-position" class="field-position" aria-live="polite"></span><button id="field-next" class="field-nav-button" type="button" aria-label="Next field">›</button></nav></div>
                         <p class="guidance-note">AI can make mistakes. Check your form.</p>
-                        <section id="explain-panel" class="explain-panel" aria-label="Selected field explanation" hidden>
-                            <div class="explain-heading"><strong id="explain-label"></strong><button id="explain-button" class="explain-button" type="button">Explain</button></div>
-                            <p class="explain-disclosure">Sends this field’s label and guidance to OpenAI.</p>
-                            <p id="explanation" class="explanation" aria-live="polite" hidden></p>
-                            <p id="explain-error" class="explain-error" role="alert" hidden></p>
+                        <section id="ask-panel" class="ask-panel" aria-label="Ask about the selected field" hidden>
+                            <strong id="ask-label" class="ask-label"></strong>
+                            <form id="ask-form" class="ask-form" novalidate><input id="ask-input" class="ask-input" type="text" name="question" maxlength="300" autocomplete="off" enterkeyhint="send" dir="auto" placeholder="Ask about this field…" aria-label="Question about this field"><button id="ask-button" class="ask-button" type="submit" disabled>Ask</button></form>
+                            <p class="ask-disclosure">Sends your question and this field’s label and guidance to OpenAI.</p>
+                            <p id="answer" class="answer" aria-live="polite" hidden></p>
+                            <p id="ask-error" class="ask-error" role="alert" hidden></p>
                         </section>
                         <div id="fields-list" class="fields-list"></div>
                     </div>
